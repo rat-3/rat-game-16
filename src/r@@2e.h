@@ -114,7 +114,7 @@ namespace gui {
     DO((line_lengths=(scoord*)calloc(term_dims.ws_row,sizeof(scoord)))==NULL)ORDIE("couldn't allocate enough for screen");
     state|=STATE_LBUF;
     
-    clear_scr()
+    clear_scr();
     struct sigaction t;
     DO(sigaction(SIGTTOU,&t,NULL)==-1)ORDIE("couldn't examine action for ttou");
   }
@@ -130,10 +130,16 @@ namespace gui {
   }
 
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
-  inline scoord toSSPX(T x){return (scoord)((x+1)*term_dims.ws_col/2);}
+  inline scoord toSSPX(T x,T d){return (scoord)((x/d+1)*term_dims.ws_col/2);}
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
-  inline scoord toSSPY(T y){return (scoord)((y+1)*term_dims.ws_row/2);}
+  inline scoord toSSPY(T y,T d){return (scoord)((y/d+1)*term_dims.ws_row/2);}
   inline scoord toSSPI(scoord x,scoord y){return (y*term_dims.ws_col)+x;}
+
+  char putChar(scoord x,scoord y,char c){
+    char d=term_buffer[toSSPI(x,y)];
+    term_buffer[toSSPI(x,y)]=c;
+    return d;
+  }
 
   void drawFrame(){
     DO(fwrite("\x1b[2J\x1b[0;0H",1,10,stdout)<10)ORDIE("couldn't write control codes to terminal");
