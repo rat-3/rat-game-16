@@ -70,8 +70,8 @@ namespace mesh {
   vec3_inner_t<vec3<float>> n;
   template<typename T> requires arith<T>&&comp<T> struct tri3 {
     vec3<T> a,b,c;//my compiler is going to blow its brains out
-    template<typename U> auto constexpr operator+(const tri3<U>& t)const{return (tri3<vec3_inner_t<decltype(std::declval<vec2<T>>()+std::declval<vec2<U>>())>>){a+t.a,b+t.b,c+t.c};}
-    template<typename U> auto constexpr operator+(const vec3<U>& v)const{return (tri3<vec3_inner_t<decltype(std::declval<vec2<T>>()+std::declval<vec2<U>>())>>){a+v,b+v,c+v};}
+    template<typename U> auto constexpr operator+(const tri3<U>& t)const{return (tri3<vec3_inner_t<decltype(std::declval<vec3<T>>()+std::declval<vec3<U>>())>>){a+t.a,b+t.b,c+t.c};}
+    template<typename U> auto constexpr operator+(const vec3<U>& v)const{return (tri3<vec3_inner_t<decltype(std::declval<vec3<T>>()+std::declval<vec3<U>>())>>){a+v,b+v,c+v};}
     template<typename U> auto constexpr operator+(const U& v)const{return (tri3<vec3_inner_t<decltype(std::declval<vec3<T>>()+std::declval<U>())>>){a+v,b+v,c+v};}
     template<typename U> auto constexpr operator-(const tri3<U>& t)const{return (tri3<vec3_inner_t<decltype(std::declval<vec3<T>>()-std::declval<vec3<U>>())>>){a-t.a,b-t.b,c-t.c};}
     template<typename U> auto constexpr operator-(const vec3<U>& v)const{return (tri3<vec3_inner_t<decltype(std::declval<vec3<T>>()-std::declval<vec3<U>>())>>){a-v,b-v,c-v};}
@@ -110,23 +110,23 @@ namespace mesh {
     }
     return a;
   }
+  template<typename T>
+  inline void rotate(vec3<arithemetic auto T>& v,char d){
+    float r1=cos(d/128.0*M_PI),r2=sin(d/128.0*M_PI);
+    float x=(v.x*r1)-(v.y*r2);
+    v.y=v.y*r1+v.x*r2;
+    v.x=x;
+  }
   vec3<mesh_size> camera{-5.0f,0.0f,0.0f};
+  vec3<char> rotation{0,0,0};
 }
 namespace gui {
   using namespace mesh;
-  vec2<scoord> toSSPV(vec3<mesh_size> v){
-    return (vec2<scoord>){
-      toSSPX(v.y,v.x),
-      toSSPY(v.z,v.x)};
+  inline vec2<scoord> toSSPV(vec3<mesh_size> v){
+    return (vec2<scoord>){toSSPX(v.y,v.x),toSSPY(v.z,v.x)};
   }
-  tri2<scoord> toSSPT(tri3<mesh_size> t){
-    return (tri2<scoord>){
-      toSSPX(t.a.y,t.a.x),
-      toSSPY(t.a.z,t.a.x),
-      toSSPX(t.a.y,t.a.x),
-      toSSPY(t.b.z,t.b.x),
-      toSSPX(t.c.y,t.c.x),
-      toSSPY(t.c.z,t.c.x)};
+  inline tri2<scoord> toSSPT(tri3<mesh_size> t){
+    return (tri2<scoord>){toSSPV(t.a),toSSPV(t.b),toSSPV(t.c)};
   }
   void drawCTri(scoord x0,scoord y0,scoord x1,scoord y1,scoord x2,scoord y2){
     scoord minx=min(x0,x1,x2),miny=min(y0,y1,y2),maxx=max(x0,x1,x2),maxy=max(y0,y1,x2);
@@ -147,7 +147,9 @@ namespace gui {
     return drawCTri(x0,y0,x1,y1,x2,y2);
   }
   void drawMTri(meshtri t){
-    return drawTTri(toSSPT(t-camera));
+    tri2<scoord> t1=toSSPT(t-camera);
+    PRINT_TRI2(t1,u);
+    return drawTTri(t1);
   }
 }
 #endif
