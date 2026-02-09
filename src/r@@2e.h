@@ -136,8 +136,10 @@ namespace gui {
   inline scoord toSSPI(scoord x,scoord y){return (y*term_dims.ws_col)+x;}
 
   char putChar(scoord x,scoord y,char c){
-    char d=term_buffer[toSSPI(x,y)];
-    term_buffer[toSSPI(x,y)]=c;
+    scoord p=toSSPI(x,y);
+    if(p>=max_chars){return '\0';}
+    char d=term_buffer[p];
+    term_buffer[p]=c;
     return d;
   }
 

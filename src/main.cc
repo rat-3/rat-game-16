@@ -10,15 +10,30 @@ int main() {
   puts("\rRAT GAME 16\n\r");
   gui::init();
   mesh::model_t* models=assets::readModels("assets/cube.stl");
-  for(short unsigned int i=0;i<models[0].tricount;i++){
-    gui::drawMTri(models[0].tris[i]);
-  }
+  FILE* file=fopen("log.txt","w");
+  char escapes=0;
   while(true){
-    switch(gui::readInput()){
-      case 'w':mesh::camera.x+=1;break;
-      case 'a':mesh::camera.y+=1;break;
-      case 's':mesh::camera.x-=1;break;
-      case 'd':mesh::camera.y-=1;break;
+    char c=gui::readInput();
+    switch(c){//escapey bits. add more later probably. note that tmux is doing strange things to us
+      case '\e':escapes|='\x01';continue;
+      case '[' :if(escapes&'\x03'=='\x01'){escapes|='\x02';}continue;
+      case 'q':exit(0);break;
+    }
+    if(escapes&'\x03'=='\x03'){
+      switch(c){
+        case 'A':break;//up
+        case 'B':break;//down
+        case 'C':mesh::camera_rotation.z-=16;break;//left
+        case 'D':mesh::camera_rotation.z+=16;break;//right
+      }
+      escapes=0;
+      continue;
+    }
+    switch(c){
+      case 'w':mesh::camera_position.x+=1;break;
+      case 's':mesh::camera_position.x-=1;break;
+      case 'd':mesh::camera_position.y+=1;break;
+      case 'a':mesh::camera_position.y-=1;break;
       case ' ':{
         gui::clear_scr();
         for(short unsigned int i=0;i<models[0].tricount;i++){
@@ -26,17 +41,9 @@ int main() {
         }
         gui::drawFrame();
       }break;
-      case 'p':{
-        int a=0;
-        gui::clear_scr();
-        for(short unsigned int i=0;i<models[0].tricount;i++){
-          mesh::tri2<gui::scoord> T=gui::toSSPT(models[0].tris[i]-mesh::camera);
-          a+=snprintf(&(gui::term_buffer[a]),gui::max_chars-a,"polygon((%u,%u),(%u,%u),(%u,%u)),",T.a.x,T.a.y,T.b.x,T.b.y,T.c.x,T.c.y);
-        }
-        gui::drawFrame();
-      }break;
-      case 'q':exit(0);break;
     }
+    escapes=0;
   }
+  fclose(file);
   return 0;
 }

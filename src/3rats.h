@@ -3,22 +3,20 @@
 #include <type_traits>
 #include <cstdlib>
 #include <r@@2e.h>
+#include <cmath>
 template<typename T> concept arith=std::is_arithmetic_v<T>;
 template<typename T> concept comp =requires(T a,T b){a<b;a>b;a==b;};
-template<typename T> T min(T a,T b){return a<b?a:b;}
-template<typename T> T max(T a,T b){return a<b?b:a;}
-template<typename T,typename...U> requires comp<T>&&(comp<U>&&...)
-T min(T t, U...a){
+template<typename T,typename U> T min(T a,U b){return a<b?a:b;}
+template<comp T,comp U> T max(T a,U b){return a<b?b:a;}
+template<comp T,comp...U> T min(T t, U...a){
   T b=min(a...);
   return t<b?t:b;
 }
-template<typename T,typename...U> requires comp<T>&&(comp<U>&&...)
-T max(T t, U...a){
+template<comp T,comp...U> T max(T t, U...a){
   T b=max(a...);
   return t<b?b:t;
 }
-template<arith T>
-inline std::make_signed_t<T> triarea(T x0,T y0,T x1,T y1,T x2,T y2){
+template<arith T> inline std::make_signed_t<T> triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   using sT=std::make_signed_t<T>;
   return((x0 * ((sT)y1-y2)) + (x1 * ((sT)y2-y0)) + (x2 * ((sT)y0-y1)));
 }
@@ -110,15 +108,20 @@ namespace mesh {
     }
     return a;
   }
-  template<typename T>
-  inline void rotate(vec3<arithemetic auto T>& v,char d){
+  template<arith T>
+  inline void rotate(T& axis_0,T& axis_1,char d){
     float r1=cos(d/128.0*M_PI),r2=sin(d/128.0*M_PI);
-    float x=(v.x*r1)-(v.y*r2);
-    v.y=v.y*r1+v.x*r2;
-    v.x=x;
+    float axis_0_t=(axis_0*r1)-(axis_1*r2);
+    axis_1=axis_1*r1+axis_0*r2;
+    axis_0=axis_0_t;
   }
-  vec3<mesh_size> camera{-5.0f,0.0f,0.0f};
-  vec3<char> rotation{0,0,0};
+  template<typename T>
+  inline tri3<T> rotateT(tri3<T>& v,char d){
+    rotate(v.a.x,v.a.y,d);rotate(v.b.x,v.b.y,d);rotate(v.c.x,v.c.y,d);
+    return v;
+  }
+  vec3<mesh_size> camera_position{-5.0f,0.0f,0.0f};
+  vec3<char>      camera_rotation{0,0,0};//roll pitch yaw
 }
 namespace gui {
   using namespace mesh;
@@ -129,7 +132,7 @@ namespace gui {
     return (tri2<scoord>){toSSPV(t.a),toSSPV(t.b),toSSPV(t.c)};
   }
   void drawCTri(scoord x0,scoord y0,scoord x1,scoord y1,scoord x2,scoord y2){
-    scoord minx=min(x0,x1,x2),miny=min(y0,y1,y2),maxx=max(x0,x1,x2),maxy=max(y0,y1,x2);
+    scoord minx=max(min(x0,x1,x2),0),miny=max(min(y0,y1,y2),0),maxx=min(max(x0,x1,x2),gui::term_dims.ws_col),maxy=min(max(y0,y1,x2),gui::term_dims.ws_row);
     for(scoord x=minx;x<maxx;x++){
       for(scoord y=miny;y<maxy;y++){
         if(triarea(x,y,x1,y1,x2,y2)>=0){if(triarea(x0,y0,x,y,x2,y2)>=0){if(triarea(x0,y0,x1,y1,x,y)>=0){
@@ -147,9 +150,8 @@ namespace gui {
     return drawCTri(x0,y0,x1,y1,x2,y2);
   }
   void drawMTri(meshtri t){
-    tri2<scoord> t1=toSSPT(t-camera);
-    PRINT_TRI2(t1,u);
-    return drawTTri(t1);
+    tri3<mesh_size> t1=t-camera_position;
+    return drawTTri(toSSPT(rotateT(t1,camera_rotation.z)));
   }
 }
 #endif

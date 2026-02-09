@@ -1,6 +1,6 @@
 # echo "" > log.txt
 NCURSES_PATH="/opt/c9/ncurses-6.3/"
-g++ -std="c++20" -I${NCURSES_PATH}include -L${NCURSES_PATH}lib -I./src -g ./src/main.cc -lncurses 2>log.txt
+g++ -std="c++20" -I./src -g ./src/main.cc 2>log.txt
 if test $(stat -c%s ./log.txt) -gt 1; then
   echo didn\'t compile \:\(
   cat log.txt
