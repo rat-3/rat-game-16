@@ -37,10 +37,17 @@ int main() {
       case ' ':{
         gui::clear_scr();
         for(short unsigned int i=0;i<models[0].tricount;i++){
-          gui::drawMTri(models[0].tris[i]);
+          gui::drawMTri(models[0].tris[i],file);
         }
         gui::drawFrame();
       }break;
+      case 'x':{
+        gui::clear_scr();
+        for(short unsigned int i=0;i<models[0].tricount;i++){
+          gui::drawMTri(models[0].tris[i],file);
+        }
+        assets::writeGrayScaleToPPM("assets/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
+      }
     }
     escapes=0;
   }

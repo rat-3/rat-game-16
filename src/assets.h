@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <3rats.h>
+#include <type_traits>
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 #define DO(x) if(x)
 #define ORDIE(s) {fclose(file);if(tmp){free(tmp);};perror(s);exit(1);}
@@ -76,7 +77,7 @@ namespace assets {
     fclose(file);
     return tris;//caller is responsible for reallocating tris and deleting vector
   }
-  template<typename ...T>
+  template<typename ...T> requires (std::is_convertible_v<T,const char*>&&...)
   model_t* readModels(const T... names) {
     size_t count=sizeof...(T);
     model_t* out=(model_t*)malloc(count*sizeof(model_t));
@@ -91,6 +92,25 @@ namespace assets {
       i++;//let a go out of scope and die
     }
     return out;
+  }
+  void writeGrayScaleToPPM(const char* name,const unsigned char* buf,size_t width,size_t height){
+    FILE* file=fopen(name,"w");
+    fprintf(file,"P3 %u %u 255\n",width,height*3);
+    for(int i=0;i<height;i++){
+      for(int j=0;j<width;j++){
+        fprintf(file,"%3u %3u %3u ",buf[i*width+j],buf[i*width+j],buf[i*width+j]);
+      }
+      fputs("\n",file);
+      for(int j=0;j<width;j++){
+        fprintf(file,"%3u %3u %3u ",buf[i*width+j],buf[i*width+j],buf[i*width+j]);
+      }
+      fputs("\n",file);
+      for(int j=0;j<width;j++){
+        fprintf(file,"%3u %3u %3u ",buf[i*width+j],buf[i*width+j],buf[i*width+j]);
+      }
+      fputs("\n",file);
+    }
+    fclose(file);
   }
 }
 #undef FEXPECT

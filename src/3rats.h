@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <r@@2e.h>
 #include <cmath>
+#define SCAST(t,v) static_cast<t>(v)
 template<typename T> concept arith=std::is_arithmetic_v<T>;
 template<typename T> concept comp =requires(T a,T b){a<b;a>b;a==b;};
 template<typename T,typename U> T min(T a,U b){return a<b?a:b;}
@@ -16,11 +17,15 @@ template<comp T,comp...U> T max(T t, U...a){
   T b=max(a...);
   return t<b?b:t;
 }
-template<arith T> inline std::make_signed_t<T> triarea(T x0,T y0,T x1,T y1,T x2,T y2){
-  using sT=std::make_signed_t<T>;
-  return((x0 * ((sT)y1-y2)) + (x1 * ((sT)y2-y0)) + (x2 * ((sT)y0-y1)));
+template<arith T> inline auto triarea(T x0,T y0,T x1,T y1,T x2,T y2){
+  if constexpr(std::is_integral_v<T>){
+    using sT=std::make_signed_t<T>;
+    return((x0 * ((sT)y1-y2)) + (x1 * ((sT)y2-y0)) + (x2 * ((sT)y0-y1)));
+  }else{return((x0 * ((T)y1-y2)) + (x1 * ((T)y2-y0)) + (x2 * ((T)y0-y1)));}
 }
 namespace mesh {
+  const char* charsbyopacity="$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`\'.";
+  int opacitylength=69;//
   typedef float mesh_size;
   template<typename T> requires arith<T>&&comp<T> struct vec2 {
     T x,y;//these operators are fuckin wild
@@ -108,15 +113,13 @@ namespace mesh {
     }
     return a;
   }
-  template<arith T>
-  inline void rotate(T& axis_0,T& axis_1,char d){
+  template<arith T> inline void rotate(T& axis_0,T& axis_1,char d){
     float r1=cos(d/128.0*M_PI),r2=sin(d/128.0*M_PI);
     float axis_0_t=(axis_0*r1)-(axis_1*r2);
     axis_1=axis_1*r1+axis_0*r2;
     axis_0=axis_0_t;
   }
-  template<typename T>
-  inline tri3<T> rotateT(tri3<T>& v,char d){
+  template<typename T> inline tri3<T> rotateT(tri3<T>& v,char d){
     rotate(v.a.x,v.a.y,d);rotate(v.b.x,v.b.y,d);rotate(v.c.x,v.c.y,d);
     return v;
   }
@@ -144,14 +147,59 @@ namespace gui {
     putChar(x1,y1,'+');
     putChar(x2,y2,'+');
   }
+  template<arith T>
+  void drawDTri(scoord x0,scoord y0,T z0,scoord x1,scoord y1,T z1,scoord x2,scoord y2,T z2,FILE* fuck){
+    scoord minx=max(min(x0,x1,x2),0),miny=max(min(y0,y1,y2),0),maxx=min(max(x0,x1,x2),gui::term_dims.ws_col),maxy=min(max(y0,y1,x2),gui::term_dims.ws_row);
+    for(scoord x=minx;x<maxx;x++){
+      for(scoord y=miny;y<maxy;y++){
+        vec3<float> barycentric;
+        if((barycentric.x=triarea(
+          SCAST(float,x),  SCAST(float,y),
+          SCAST(float,x1), SCAST(float,y1),
+          SCAST(float,x2), SCAST(float,y2)
+        ))>=0){
+          if((barycentric.y=triarea(
+            SCAST(float,x0), SCAST(float,y0),
+            SCAST(float,x),  SCAST(float,y),
+            SCAST(float,x2), SCAST(float,y2)
+          ))>=0){
+            if((barycentric.z=triarea(
+              SCAST(float,x0), SCAST(float,y0),
+              SCAST(float,x1), SCAST(float,y1),
+              SCAST(float,x),  SCAST(float,y)
+            ))>=0){
+              barycentric=barycentric/triarea(
+                SCAST(float,x0),SCAST(float,y0),
+                SCAST(float,x1),SCAST(float,y1),
+                SCAST(float,x2),SCAST(float,y2));
+              float depth=(barycentric.x*z0+barycentric.y*z1+barycentric.z*z2)/(z0+z1+z2);
+              float d=(depth/8);
+              fprintf(fuck,"%u?%u\n",depth_buffer[x+y*term_dims.ws_col],static_cast<char>(d*255));
+              if((depth_buffer[x+y*term_dims.ws_col]) > static_cast<char>(d*255)){
+                depth_buffer[x+y*term_dims.ws_col]=static_cast<char>(d*255);
+                if(0<depth&&depth<4){putChar(x,y,charsbyopacity[static_cast<int>(d*opacitylength)]);}
+              }
+            }
+          }
+        }
+      }
+    }
+    putChar(x0,y0,'+');
+    putChar(x1,y1,'+');
+    putChar(x2,y2,'+');
+  }
   void drawTTri(tri2<scoord> t){
     auto [p0,p1,p2]=t;
     auto [x0,y0]=p0;auto [x1,y1]=p1;auto [x2,y2]=p2;
     return drawCTri(x0,y0,x1,y1,x2,y2);
   }
-  void drawMTri(meshtri t){
+  void drawMTri(meshtri t,FILE* fuck){
     tri3<mesh_size> t1=t-camera_position;
-    return drawTTri(toSSPT(rotateT(t1,camera_rotation.z)));
+    return drawDTri(
+      toSSPX(t1.a.y,t1.a.x),toSSPY(t1.a.z,t1.a.x),t1.a.x,
+      toSSPX(t1.b.y,t1.b.x),toSSPY(t1.b.z,t1.b.x),t1.b.x,
+      toSSPX(t1.c.y,t1.c.x),toSSPY(t1.c.z,t1.c.x),t1.c.x,fuck
+    );
   }
 }
 #endif

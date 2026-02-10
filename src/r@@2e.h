@@ -14,7 +14,8 @@
 #define STATE_TERM 0b00000001//binary literals are only in c++
 #define STATE_SIGS 0b00000010//would have to use hex in c
 #define STATE_TBUF 0b00000100
-#define STATE_LBUF 0b00001000
+// #define STATE_LBUF 0b00001000
+#define STATE_DBUF 0b00010000
 #define STATE_ICLR 0b10000000
 #define IFST(X) if(::gui::state&STATE_ ## X) //did not want to write out if(state&whatever) like 80 times
 namespace gui {
@@ -34,13 +35,14 @@ namespace gui {
   struct timeval input_timeout{0,0};//wait for NOTHING
 
   //signals to make sure we can ignore things we don't like, like someone telling the program to stop
-  sigset_t old_sigset{};
-  sigset_t cur_sigset{};
+  sigset_t old_sigset;
+  sigset_t cur_sigset;
   
   //screen data. once things get multithreaded, make volatile
   struct winsize term_dims;//represents current terminal dimensions. has fields ws_row and ws_col
   char* term_buffer=NULL;
-  scoord* line_lengths=NULL;
+  unsigned char* depth_buffer=NULL;
+  // scoord* line_lengths=NULL;
   scoord max_chars=0;
 
   int set_term_flags(tcflag_t fl,tcflag_t fi,tcflag_t fo){
@@ -64,9 +66,13 @@ namespace gui {
       if(term_buffer){free(term_buffer);term_buffer=NULL;max_chars=0;}
       state&=~STATE_TBUF;
     }
-    IFST(LBUF){
-      if(line_lengths){free(line_lengths);}
-      state&=!STATE_LBUF;
+    // IFST(LBUF){
+    //   if(line_lengths){free(line_lengths);}
+    //   state&=~STATE_LBUF;
+    // }
+    IFST(DBUF){
+      if(depth_buffer){free(depth_buffer);}
+      state&=~STATE_DBUF;
     }
     if(err){
       perror(err);
@@ -82,7 +88,9 @@ namespace gui {
     fclose(g);
   }
 
-  void clear_scr() {for(scoord i=0;i<max_chars;i++){term_buffer[i]=' ';}}
+  void clear_scr() {
+    for(scoord i=0;i<max_chars;i++){term_buffer[i]=' ';depth_buffer[i]=255;}
+  }
 
   void init(){
     //make sure we're not doing things twice. idiot.
@@ -111,8 +119,10 @@ namespace gui {
     max_chars=term_dims.ws_col*term_dims.ws_row;
     DO((term_buffer=(char*)malloc(max_chars))==NULL)ORDIE("couldn't allocate enough for screen");
     state|=STATE_TBUF;
-    DO((line_lengths=(scoord*)calloc(term_dims.ws_row,sizeof(scoord)))==NULL)ORDIE("couldn't allocate enough for screen");
-    state|=STATE_LBUF;
+    // DO((line_lengths=(scoord*)calloc(term_dims.ws_row,sizeof(scoord)))==NULL)ORDIE("couldn't allocate enough for screen");
+    // state|=STATE_LBUF;
+    DO((depth_buffer=(unsigned char*)malloc(max_chars))==NULL)ORDIE("couldn't allocate depth buffer");
+    state|=STATE_DBUF;
     
     clear_scr();
     struct sigaction t;
