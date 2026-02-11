@@ -9,7 +9,7 @@
 int main() {
   puts("\rRAT GAME 16\n\r");
   gui::init();
-  mesh::model_t* models=assets::readModels("assets/cube.stl");
+  mesh::model_t* models=assets::readModels("assets/plane.stl");
   FILE* file=fopen("log.txt","w");
   char escapes=0;
   while(true){
@@ -46,7 +46,7 @@ int main() {
         for(short unsigned int i=0;i<models[0].tricount;i++){
           gui::drawMTri(models[0].tris[i],file);
         }
-        assets::writeGrayScaleToPPM("assets/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
+        assets::writeGrayScaleToPPM("debug/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
       }
     }
     escapes=0;

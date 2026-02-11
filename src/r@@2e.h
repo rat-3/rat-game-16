@@ -21,6 +21,7 @@
 namespace gui {
   typedef unsigned short int scoord;//coordinate on the screen, in characters
   typedef unsigned char sfrac;//represents the fraction of width/this
+  
 
   const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|/*ISIG|*/IEXTEN),//remember that ~ is bitwise not
                  RAWMODE_IFLAGS=~(BRKINT|ICRNL|INPCK|ISTRIP|IXON),

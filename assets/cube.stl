@@ -1,4 +1,4 @@
-solid model
+solid cube
 facet normal 0.0 0.0 -1.0
 outer loop
 vertex 1.0 1.0 -1.0

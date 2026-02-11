@@ -24,8 +24,8 @@ template<arith T> inline auto triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   }else{return((x0 * ((T)y1-y2)) + (x1 * ((T)y2-y0)) + (x2 * ((T)y0-y1)));}
 }
 namespace mesh {
-  const char* charsbyopacity="$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`\'.";
-  int opacitylength=69;//
+  const char* charsbyopacity="$@%&#0X/|!?+~-;:,.";
+  int opacitylength=18;//
   typedef float mesh_size;
   template<typename T> requires arith<T>&&comp<T> struct vec2 {
     T x,y;//these operators are fuckin wild
@@ -172,10 +172,11 @@ namespace gui {
                 SCAST(float,x0),SCAST(float,y0),
                 SCAST(float,x1),SCAST(float,y1),
                 SCAST(float,x2),SCAST(float,y2));
-              float depth=(barycentric.x*z0+barycentric.y*z1+barycentric.z*z2)/(z0+z1+z2);
-              float d=(depth/8);
-              fprintf(fuck,"%u?%u\n",depth_buffer[x+y*term_dims.ws_col],static_cast<char>(d*255));
+              // barycentric=barycentric/(z0+z1+z2);
+              float depth=(barycentric.x*z0+barycentric.y*z1+barycentric.z*z2);
+              float d=(depth*3/(z0+z1+z2));
               if((depth_buffer[x+y*term_dims.ws_col]) > static_cast<char>(d*255)){
+                if(depth_buffer[x+y*term_dims.ws_col]!=255){fprintf(fuck,"%.3u>%.3u:%c->%c\n",depth_buffer[x+y*term_dims.ws_col],static_cast<char>(d*255),term_buffer[x+y*term_dims.ws_col],charsbyopacity[static_cast<int>(d*opacitylength)]);}
                 depth_buffer[x+y*term_dims.ws_col]=static_cast<char>(d*255);
                 if(0<depth&&depth<4){putChar(x,y,charsbyopacity[static_cast<int>(d*opacitylength)]);}
               }
@@ -195,6 +196,7 @@ namespace gui {
   }
   void drawMTri(meshtri t,FILE* fuck){
     tri3<mesh_size> t1=t-camera_position;
+    rotateT(t1,camera_rotation.z);
     return drawDTri(
       toSSPX(t1.a.y,t1.a.x),toSSPY(t1.a.z,t1.a.x),t1.a.x,
       toSSPX(t1.b.y,t1.b.x),toSSPY(t1.b.z,t1.b.x),t1.b.x,
