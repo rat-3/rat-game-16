@@ -9,8 +9,7 @@
 int main() {
   puts("\rRAT GAME 16\n\r");
   gui::init();
-  mesh::model_t* models=assets::readModels("assets/plane.stl");
-  FILE* file=fopen("log.txt","w");
+  mesh::model_t* models=assets::readModels("assets/cube.stl");
   char escapes=0;
   while(true){
     char c=gui::readInput();
@@ -27,30 +26,29 @@ int main() {
         case 'D':mesh::camera_rotation.z+=16;break;//right
       }
       escapes=0;
-      continue;
+      // continue;
     }
     switch(c){
       case 'w':mesh::camera_position.x+=1;break;
       case 's':mesh::camera_position.x-=1;break;
       case 'd':mesh::camera_position.y+=1;break;
       case 'a':mesh::camera_position.y-=1;break;
-      case ' ':{
-        gui::clear_scr();
-        for(short unsigned int i=0;i<models[0].tricount;i++){
-          gui::drawMTri(models[0].tris[i],file);
-        }
-        gui::drawFrame();
-      }break;
       case 'x':{
         gui::clear_scr();
         for(short unsigned int i=0;i<models[0].tricount;i++){
-          gui::drawMTri(models[0].tris[i],file);
+          gui::drawMTri(models[0].tris[i]);
         }
         assets::writeGrayScaleToPPM("debug/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
       }
     }
-    escapes=0;
+    if(c){
+      gui::clear_scr();
+      for(short unsigned int i=0;i<models[0].tricount;i++){
+        gui::drawMTri(models[0].tris[i]);
+      }
+      gui::drawFrame();
+      escapes=0;
+    }
   }
-  fclose(file);
   return 0;
 }

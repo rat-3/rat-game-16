@@ -17,14 +17,14 @@ template<comp T,comp...U> T max(T t, U...a){
   T b=max(a...);
   return t<b?b:t;
 }
-template<arith T> inline auto triarea(T x0,T y0,T x1,T y1,T x2,T y2){
+template<arith T> inline auto constexpr triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   if constexpr(std::is_integral_v<T>){
     using sT=std::make_signed_t<T>;
-    return((x0 * ((sT)y1-y2)) + (x1 * ((sT)y2-y0)) + (x2 * ((sT)y0-y1)));
-  }else{return((x0 * ((T)y1-y2)) + (x1 * ((T)y2-y0)) + (x2 * ((T)y0-y1)));}
+    return -((x0 * ((sT)y1-y2)) + (x1 * ((sT)y2-y0)) + (x2 * ((sT)y0-y1)));
+  }else{return -((x0 * (y1-y2)) + (x1 * (y2-y0)) + (x2 * (y0-y1)));}
 }
 namespace mesh {
-  const char* charsbyopacity="$@%&#0X/|!?+~-;:,.";
+  const char* charsbyopacity="$@%&#0X/|!?+~-;:,.";//".,:;-~+?!|/X0$&%@$"
   int opacitylength=18;//
   typedef float mesh_size;
   template<typename T> requires arith<T>&&comp<T> struct vec2 {
@@ -148,7 +148,7 @@ namespace gui {
     putChar(x2,y2,'+');
   }
   template<arith T>
-  void drawDTri(scoord x0,scoord y0,T z0,scoord x1,scoord y1,T z1,scoord x2,scoord y2,T z2,FILE* fuck){
+  void drawTri(scoord x0,scoord y0,T z0,scoord x1,scoord y1,T z1,scoord x2,scoord y2,T z2){
     scoord minx=max(min(x0,x1,x2),0),miny=max(min(y0,y1,y2),0),maxx=min(max(x0,x1,x2),gui::term_dims.ws_col),maxy=min(max(y0,y1,x2),gui::term_dims.ws_row);
     for(scoord x=minx;x<maxx;x++){
       for(scoord y=miny;y<maxy;y++){
@@ -172,35 +172,25 @@ namespace gui {
                 SCAST(float,x0),SCAST(float,y0),
                 SCAST(float,x1),SCAST(float,y1),
                 SCAST(float,x2),SCAST(float,y2));
-              // barycentric=barycentric/(z0+z1+z2);
               float depth=(barycentric.x*z0+barycentric.y*z1+barycentric.z*z2);
-              float d=(depth*3/(z0+z1+z2));
-              if((depth_buffer[x+y*term_dims.ws_col]) > static_cast<char>(d*255)){
-                if(depth_buffer[x+y*term_dims.ws_col]!=255){fprintf(fuck,"%.3u>%.3u:%c->%c\n",depth_buffer[x+y*term_dims.ws_col],static_cast<char>(d*255),term_buffer[x+y*term_dims.ws_col],charsbyopacity[static_cast<int>(d*opacitylength)]);}
-                depth_buffer[x+y*term_dims.ws_col]=static_cast<char>(d*255);
-                if(0<depth&&depth<4){putChar(x,y,charsbyopacity[static_cast<int>(d*opacitylength)]);}
+              float d=(depth/8);
+              if((depth_buffer[x+y*term_dims.ws_col]) > (unsigned char)(d*255)){
+                depth_buffer[x+y*term_dims.ws_col]=(unsigned char)(d*255);
+                if(0<depth&&depth<8){putChar(x,y,charsbyopacity[(int)(d*opacitylength)]);}
               }
             }
           }
         }
       }
     }
-    putChar(x0,y0,'+');
-    putChar(x1,y1,'+');
-    putChar(x2,y2,'+');
   }
-  void drawTTri(tri2<scoord> t){
-    auto [p0,p1,p2]=t;
-    auto [x0,y0]=p0;auto [x1,y1]=p1;auto [x2,y2]=p2;
-    return drawCTri(x0,y0,x1,y1,x2,y2);
-  }
-  void drawMTri(meshtri t,FILE* fuck){
+  void drawMTri(meshtri t){
     tri3<mesh_size> t1=t-camera_position;
     rotateT(t1,camera_rotation.z);
-    return drawDTri(
+    return drawTri(
       toSSPX(t1.a.y,t1.a.x),toSSPY(t1.a.z,t1.a.x),t1.a.x,
       toSSPX(t1.b.y,t1.b.x),toSSPY(t1.b.z,t1.b.x),t1.b.x,
-      toSSPX(t1.c.y,t1.c.x),toSSPY(t1.c.z,t1.c.x),t1.c.x,fuck
+      toSSPX(t1.c.y,t1.c.x),toSSPY(t1.c.z,t1.c.x),t1.c.x
     );
   }
 }
