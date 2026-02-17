@@ -7,11 +7,12 @@
 #include <assets.h>
 // #include <curses.h>
 int main() {
-  FILE* debug=fopen("log.txt","w");
   puts("\rRAT GAME 16\n\r");
   gui::init();
   mesh::model_t* models=assets::readModels("assets/cube.stl");
-  char escapes=0;
+  unsigned char escapes=0;
+  unsigned char mode=0;
+  unsigned char modes=2;
   while(true){
     char c=gui::readInput();
     switch(c){//escapey bits. add more later probably. note that tmux is doing strange things to us
@@ -21,8 +22,8 @@ int main() {
     }
     if(escapes&'\x03'=='\x03'){
       switch(c){
-        case 'A':break;//up
-        case 'B':break;//down
+        case 'A':mode=(mode+1)%modes;break;//up
+        case 'B':mode=(mode+modes-1)%modes;break;//down
         case 'C':mesh::camera_rotation.z-=16;break;//left
         case 'D':mesh::camera_rotation.z+=16;break;//right
       }
@@ -37,7 +38,7 @@ int main() {
       case 'x':{
         gui::clear_scr();
         for(short unsigned int i=0;i<models[0].tricount;i++){
-          gui::drawMTri(models[0].tris[i],debug);
+          gui::drawMTri(models[0].tris[i]);
         }
         assets::writeGrayScaleToPPM("debug/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
       }
@@ -45,8 +46,10 @@ int main() {
     if(c){
       gui::clear_scr();
       for(short unsigned int i=0;i<models[0].tricount;i++){
-        gui::drawMTri(models[0].tris[i],debug);
+        if(mode==0){gui::drawMTri(models[0].tris[i]);}
+        if(mode==1){gui::drawMLines(models[0].tris[i]);}
       }
+      snprintf(gui::term_buffer,gui::term_dims.ws_col,"mode=%u/%u",mode+1,modes);
       gui::drawFrame();
       escapes=0;
     }
