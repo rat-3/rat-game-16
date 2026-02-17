@@ -7,6 +7,7 @@
 #include <assets.h>
 // #include <curses.h>
 int main() {
+  FILE* debug=fopen("log.txt","w");
   puts("\rRAT GAME 16\n\r");
   gui::init();
   mesh::model_t* models=assets::readModels("assets/cube.stl");
@@ -36,7 +37,7 @@ int main() {
       case 'x':{
         gui::clear_scr();
         for(short unsigned int i=0;i<models[0].tricount;i++){
-          gui::drawMTri(models[0].tris[i]);
+          gui::drawMTri(models[0].tris[i],debug);
         }
         assets::writeGrayScaleToPPM("debug/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
       }
@@ -44,7 +45,7 @@ int main() {
     if(c){
       gui::clear_scr();
       for(short unsigned int i=0;i<models[0].tricount;i++){
-        gui::drawMTri(models[0].tris[i]);
+        gui::drawMTri(models[0].tris[i],debug);
       }
       gui::drawFrame();
       escapes=0;
