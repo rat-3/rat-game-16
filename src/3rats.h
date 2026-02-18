@@ -28,8 +28,8 @@ template<arith T> inline auto constexpr triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   }else{return -((x0 * (y1-y2)) + (x1 * (y2-y0)) + (x2 * (y0-y1)));}
 }
 namespace mesh {
-  const char* charsbyopacity="$@%&#0X?+;:,.";//".,:;-~+?!|/X0$&%@$"
-  int opacitylength=13;
+  const char* charsbyopacity="$@MN%&0EK?UO^!;:,.";
+  int opacitylength=18;
   typedef float mesh_size;
   template<typename T> requires arith<T>&&comp<T> struct vec2 {
     T x,y;//these operators are fuckin wild
@@ -147,24 +147,34 @@ namespace gui {
     if((abs(dx)>abs(dy))&&(dx!=0)){
       float m=(float)dy/dx;
       float mz=(z1-z0)/(dx);
-      for(scoord x=x0_;x<x1_;x++){
-        scoord y=m*(x-x0_)+y0_;
+      scoord ly=(x0_>0)?m*(-1)+y0_:y0_;
+      scoord ny=y0_;
+      char c=(m>0)?'\\':'/';
+      for(scoord x=x0_;x<x1_;){
+        scoord y=ny;
         float d=mz*(x-x0_)+z0_;
         if(depth_buffer[x+y*term_dims.ws_col]>(d/FARPLANEX*255)){
           depth_buffer[x+y*term_dims.ws_col]=(d/FARPLANEX*255);
-          putChar(x,y,'*');
+          putChar(x,y,(y!=ly||y!=ny)?c:'-');
         }
+        ly=y;
+        ny=m*(++x-x0_)+y0_;
       }
     }else{
       float m=(float)dx/dy;
       float mz=(z1-z0)/(dy);
-      for(scoord y=y0_;y<y1_;y++){
-        scoord x=m*(y-y0_)+x0_;
+      scoord lx=(y0_>0)?m*(-1)+x0_:x0_;
+      scoord nx=x0_;
+      char c=(m>0)?'\\':'/';
+      for(scoord y=y0_;y<y1_;){
+        scoord x=nx;
         float d=mz*(y-y0_)+z0_;
         if(depth_buffer[x+y*term_dims.ws_col]>(d/FARPLANEX*255)){
           depth_buffer[x+y*term_dims.ws_col]=(d/FARPLANEX*255);
-          putChar(x,y,'*');
+          putChar(x,y,(x!=lx||x!=nx)?c:'|');
         }
+        lx=x;
+        nx=m*(++y-y0_)+x0_;
       }
     }
   }
