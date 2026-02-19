@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdlib>
 #include <cstring>
-#include <3rats.h>
+#include <3rats.hpp>
 #include <type_traits>
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 #define DO(x) if(x)

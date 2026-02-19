@@ -9,19 +9,20 @@
 #include <errno.h>
 #include <stdio.h>
 #include <type_traits>
+#include <colors.hpp>
 #define DO(x) if(x)
 #define ORDIE(s) {::gui::stop(s);exit(1);}
+#define BRKST(X,Y) if(::gui::state&STATE_ ## X){Y ::gui::state&=~STATE_ ## X;} //did not want to write out if(state&whatever) like 80 times
 #define STATE_TERM 0b00000001//binary literals are only in c++
 #define STATE_SIGS 0b00000010//would have to use hex in c
-#define STATE_TBUF 0b00000100
-// #define STATE_LBUF 0b00001000
+#define STATE_TBUF 0b00000100//which is lowkirkenuinely wild
+#define STATE_CBUF 0b00001000
 #define STATE_DBUF 0b00010000
 #define STATE_ICLR 0b10000000
-#define IFST(X) if(::gui::state&STATE_ ## X) //did not want to write out if(state&whatever) like 80 times
 namespace gui {
+  using namespace colors;
   typedef unsigned short int scoord;//coordinate on the screen, in characters
   typedef unsigned char sfrac;//represents the fraction of width/this
-  
 
   const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|/*ISIG|*/IEXTEN),//remember that ~ is bitwise not
                  RAWMODE_IFLAGS=~(BRKINT|ICRNL|INPCK|ISTRIP|IXON),
@@ -40,10 +41,10 @@ namespace gui {
   sigset_t cur_sigset;
   
   //screen data. once things get multithreaded, make volatile
-  struct winsize term_dims;//represents current terminal dimensions. has fields ws_row and ws_col
+  struct winsize term_dims;//represents current terminal dimensions. has fields ws_row and ws_col. should change
   char* term_buffer=NULL;
   unsigned char* depth_buffer=NULL;
-  // scoord* line_lengths=NULL;
+  color_t* color_buffer=NULL;
   scoord max_chars=0;
 
   int set_term_flags(tcflag_t fl,tcflag_t fi,tcflag_t fo){
@@ -54,30 +55,17 @@ namespace gui {
   }
 
   void stop(const char* err){
-    IFST(ICLR){return;}
-    IFST(SIGS){
+    if(state&STATE_ICLR){return;}
+    BRKST(SIGS,
       if(sigprocmask(SIG_SETMASK,&old_sigset,NULL)==-1){perror("couldn't restore signal set");}
-      state&=~STATE_SIGS;
-    }
-    IFST(TERM){
+    )
+    BRKST(TERM,
       if(tcsetattr(STDIN_FILENO,TCSAFLUSH,&old_term_state)){perror("couldn't to restore terminal state");}
-      state&=~STATE_TERM;
-    }
-    IFST(TBUF){
-      if(term_buffer){free(term_buffer);term_buffer=NULL;max_chars=0;}
-      state&=~STATE_TBUF;
-    }
-    // IFST(LBUF){
-    //   if(line_lengths){free(line_lengths);}
-    //   state&=~STATE_LBUF;
-    // }
-    IFST(DBUF){
-      if(depth_buffer){free(depth_buffer);}
-      state&=~STATE_DBUF;
-    }
-    if(err){
-      perror(err);
-    }
+    )
+    BRKST(TBUF,if(term_buffer){free(term_buffer);term_buffer=NULL;max_chars=0;})
+    BRKST(CBUF,if(color_buffer){free(color_buffer);color_buffer=NULL;})
+    BRKST(DBUF,if(depth_buffer){free(depth_buffer);depth_buffer=NULL;})
+    if(err){perror(err);}
     state|=STATE_ICLR;
   }
   void stop() {state|=STATE_ICLR;stop(NULL);}
@@ -90,7 +78,7 @@ namespace gui {
   }
 
   void clear_scr() {
-    for(scoord i=0;i<max_chars;i++){term_buffer[i]=' ';depth_buffer[i]=255;}
+    for(scoord i=0;i<max_chars;i++){term_buffer[i]=' ';depth_buffer[i]=255;color_buffer[i]=default_color;}
   }
 
   void init(){
@@ -118,16 +106,16 @@ namespace gui {
     //get some data about what the terminal looks like
     DO(ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_dims))ORDIE("couldn't get terminal dimensions");
     max_chars=term_dims.ws_col*term_dims.ws_row;
-    DO((term_buffer=(char*)malloc(max_chars))==NULL)ORDIE("couldn't allocate enough for screen");
+    DO((term_buffer=(char*)malloc(max_chars))==NULL)ORDIE("couldn't allocate for screen");//malloc because we clear it later with spaces instead of '\0'
     state|=STATE_TBUF;
-    // DO((line_lengths=(scoord*)calloc(term_dims.ws_row,sizeof(scoord)))==NULL)ORDIE("couldn't allocate enough for screen");
-    // state|=STATE_LBUF;
-    DO((depth_buffer=(unsigned char*)malloc(max_chars))==NULL)ORDIE("couldn't allocate depth buffer");
+    DO((color_buffer=(color_t*)malloc(max_chars*sizeof(color_t)))==NULL)ORDIE("couldn't allocate for colors");
+    state|=STATE_CBUF;
+    DO((depth_buffer=(unsigned char*)malloc(max_chars))==NULL)ORDIE("couldn't allocate for depth buffer");
     state|=STATE_DBUF;
     
     clear_scr();
-    struct sigaction t;
-    DO(sigaction(SIGTTOU,&t,NULL)==-1)ORDIE("couldn't examine action for ttou");
+    // struct sigaction t;
+    // DO(sigaction(SIGTTOU,&t,NULL)==-1)ORDIE("couldn't examine action for ttou"); //double check things work later
   }
 
   bool hasInput(){
@@ -153,13 +141,50 @@ namespace gui {
     term_buffer[p]=c;
     return d;
   }
+  color_t putColor(scoord x,scoord y,color_t c){
+    scoord p=toSSPI(x,y);
+    if(p>=max_chars){return 0;}
+    color_t d=color_buffer[p];
+    color_buffer[p]=c;
+    return d;
+  }
 
   void drawFrame(){
     DO(fwrite("\x1b[2J\x1b[0;0H",1,10,stdout)<10)ORDIE("couldn't write control codes to terminal");
-    DO(fwrite(term_buffer,1,max_chars,stdout)<max_chars)ORDIE("couldn't write screen to terminal");
+    color_t last_color_fg=color_buffer[0]&0x0F;
+    color_t last_color_bg=color_buffer[0]&0xF0;
+    scoord last_char=0;
+    for(scoord i=1;i<max_chars;i++){
+      bool fg_change=((color_buffer[i]&0x0F)!=last_color_fg);
+      bool bg_change=((color_buffer[i]&0xF0)!=last_color_bg);
+      if(fg_change||bg_change){
+        fwrite(term_buffer+last_char,1,i-last_char,stdout);
+        if(fg_change){
+          last_color_fg=color_buffer[i];
+          if(bg_change){
+            fprintf(stdout,"%s%s",ansi_fg(color_buffer[i]),ansi_bg(color_buffer[i]));
+            fseek(stdout,-1,SEEK_CUR);
+            last_color_bg=color_buffer[i];
+          }else{
+            fprintf(stdout,"%s",ansi_fg(color_buffer[i]));
+            fseek(stdout,-1,SEEK_CUR);
+          }
+        }else{
+          if(bg_change){
+            fprintf(stdout,"%s",ansi_bg(color_buffer[i]));
+            fseek(stdout,-1,SEEK_CUR);
+            last_color_bg=color_buffer[i];
+          }
+        }
+        last_char=i;
+      }
+    }
+    fwrite(term_buffer+last_char,1,max_chars-last_char,stdout);
+    // fseek(stdout,-1,SEEK_CUR);
+    fflush(stdout);
   }
 }
 #undef DO
 #undef ORDIE
-#undef IFST
+#undef BRKST
 #endif

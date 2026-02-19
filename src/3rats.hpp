@@ -2,7 +2,7 @@
 #define RATS3D_H
 #include <type_traits>
 #include <cstdlib>
-#include <r@@2e.h>
+#include <r@@2e.hpp>
 #include <cmath>
 #define SCAST(t,v) static_cast<t>(v)
 #define FARPLANEX 8
@@ -226,7 +226,10 @@ namespace gui {
               if((depth_buffer[x+y*term_dims.ws_col]) > (unsigned char)(d*255)){
                 depth_buffer[x+y*term_dims.ws_col]=(unsigned char)(d*255);
                 char c=charsbyopacity[(int)(d*opacitylength)];
-                if(0<depth&&depth<FARPLANEX){putChar(x,y,c);}
+                if(0<depth&&depth<FARPLANEX){
+                  putChar(x,y,c);
+                  putColor(x,y,colors::col(colors::red,colors::black));
+                }
               }
             }
           }
