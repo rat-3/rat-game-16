@@ -28,7 +28,7 @@ template<arith T> inline auto constexpr triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   }else{return -((x0 * (y1-y2)) + (x1 * (y2-y0)) + (x2 * (y0-y1)));}
 }
 namespace mesh {
-  const char* charsbyopacity="$@MN%&0EK?UO^!;:,.";
+  const char* charsbyopacity="$@MN%&E0K?UO^!;:,.";
   int opacitylength=18;
   typedef float mesh_size;
   template<typename T> requires arith<T>&&comp<T> struct vec2 {
@@ -125,6 +125,72 @@ namespace mesh {
     rotate(v.a.x,v.a.y,d);rotate(v.b.x,v.b.y,d);rotate(v.c.x,v.c.y,d);
     return v;
   }
+  template<typename T> vec3<T>* clipTriX(const tri3<T>& t,T x){//012,230
+    vec3<T>* out=(vec3<T>*)malloc(sizeof(vec3<T>)*4);
+#define p0 out[0]
+#define p1 out[1]
+#define p2 out[2]//could just reorder a few references instead of using if/else and twould likely be faster
+#define p3 out[3]//ari do that if you ever see this
+    p0=t.a;p1=t.b;p2=t.c;p3={0,0,0};
+    char v=(p0.x>x)+(p1.x>x)+(p2.x>x);
+    switch(v){
+      case 0:break;
+      case 1:{
+        if(p0.x>x){
+          p1.y=(p0.y-p1.y)/(p0.x-p1.x)*(x-p1.x)+p1.y;
+          p1.z=(p0.z-p1.z)/(p0.x-p1.x)*(x-p1.x)+p1.z;
+          p1.x=x;
+          p2.y=(p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y;
+          p2.z=(p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z;
+          p2.x=x;
+        }else if(p1.x>x){
+          p0.y=(p1.y-p0.y)/(p1.x-p0.x)*(x-p0.x)+p0.y;
+          p0.z=(p1.z-p0.z)/(p1.x-p0.x)*(x-p0.x)+p0.z;
+          p0.x=x;
+          p2.y=(p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y;
+          p2.z=(p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z;
+          p2.x=x;
+        }else{
+          p0.y=(p2.y-p0.y)/(p2.x-p0.x)*(x-p0.x)+p0.y;
+          p0.z=(p2.z-p0.z)/(p2.x-p0.x)*(x-p0.x)+p0.z;
+          p0.x=x;
+          p1.y=(p2.y-p1.y)/(p2.x-p1.x)*(x-p1.x)+p1.y;
+          p1.z=(p2.z-p1.z)/(p2.x-p1.x)*(x-p1.x)+p1.z;
+          p1.x=x;
+        }
+        break;
+      }
+      case 2:{
+        if(p0.x<=x){
+          p3.y=(p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y;
+          p3.z=(p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z;
+          p3.x=x;
+          p0.y=(p1.y-p0.y)/(p1.x-p0.x)*(x-p0.x)+p0.y;
+          p0.z=(p1.z-p0.z)/(p1.x-p0.x)*(x-p0.x)+p0.z;
+          p0.x=x;
+        }else if(p1.x<=x){
+          p3=p2;
+          p2.y=(p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y;
+          p2.z=(p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z;
+          p2.x=x;
+          p1.y=(p0.y-p1.y)/(p0.x-p1.x)*(x-p1.x)+p1.y;
+          p1.z=(p0.z-p1.z)/(p0.x-p1.x)*(x-p1.x)+p1.z;
+          p1.x=x;
+        }else{
+          p3.y=(p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y;
+          p3.z=(p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z;
+          p3.x=x;
+          p2.y=(p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y;
+          p2.z=(p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z;
+          p2.x=x;
+        }
+      }
+    }
+    return out;
+#undef p0
+#undef p1
+#undef p2
+  }
   vec3<mesh_size> camera_position{-5.0f,0.0f,0.0f};
   vec3<char>      camera_rotation{0,0,0};//roll pitch yaw
 }
@@ -191,6 +257,20 @@ namespace gui {
   void drawMTri(const meshtri& t){
     tri3<mesh_size> t1=t-camera_position;
     rotateT(t1,camera_rotation.z);
+    vec3<mesh_size>* clipped=clipTriX(t1,1.0f);
+    fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",clipped[0].x,clipped[0].y,clipped[0].z,clipped[1].x,clipped[1].y,clipped[1].z,clipped[2].x,clipped[2].y,clipped[2].z);
+    t1.a=clipped[0];
+    t1.b=clipped[1];
+    t1.c=clipped[2];
+    if(clipped[3].x!=0.0f){
+      meshtri t2=t;
+      t2.a=clipped[2];
+      t2.b=clipped[3];
+      t2.c=clipped[0];
+      fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",clipped[2].x,clipped[2].y,clipped[2].z,clipped[3].x,clipped[3].y,clipped[3].z,clipped[0].x,clipped[0].y,clipped[0].z);
+      drawMTri(t2);//dont recurr more than once please :3
+    }
+    free(clipped);
     mesh_size z0=t1.a.x,z1=t1.b.x,z2=t1.c.x;
     scoord x0=toSSPX(t1.a.y,z0),y0=toSSPY(t1.a.z,z0),
            x1=toSSPX(t1.b.y,z1),y1=toSSPY(t1.b.z,z1),
@@ -222,8 +302,8 @@ namespace gui {
               float d=(depth/FARPLANEX);
               if((depth_buffer[x+y*term_dims.ws_col]) > (unsigned char)(d*255)){
                 depth_buffer[x+y*term_dims.ws_col]=(unsigned char)(d*255);
-                char c=charsbyopacity[(int)(d*opacitylength)];
                 if(0<depth&&depth<FARPLANEX){
+                  char c=charsbyopacity[(int)(d*opacitylength)];
                   putChar(x,y,c);
                   putColor(x,y,colors::col(colors::red,colors::black));
                 }

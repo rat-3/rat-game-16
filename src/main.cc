@@ -2,6 +2,8 @@
 #define PRINT_TRI3(T,F) printf("triangle((%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F ")),",T.a.x,T.a.y,T.a.z,T.b.x,T.b.y,T.b.z,T.c.x,T.c.y,T.c.z)
 #define PRINT_TRI2(T,F) printf("polygon((%" #F ",%" #F "),(%" #F ",%" #F "),(%" #F ",%" #F ")),",T.a.x,T.a.y,T.b.x,T.b.y,T.c.x,T.c.y)
 #define PRINT_TRI23(T,F) printf("triangle((%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F ")),",T.a.x,T.a.y,0,T.b.x,T.b.y,0,T.c.x,T.c.y,0)
+#include<stdio.h>
+FILE* debug=fopen("./debug/debug.log","w");
 #include <r@@2e.hpp>
 #include <3rats.hpp>
 #include <assets.hpp>
@@ -51,9 +53,11 @@ int main() {
         if(mode==0){gui::drawMTri(models[0].tris[i]);}
         if(mode==1){gui::drawMLines(models[0].tris[i]);}
       }
+      fputs("\n",debug);
       gui::drawFrame();
       escapes=0;
     }
   }
+  fclose(debug);
   return 0;
 }
