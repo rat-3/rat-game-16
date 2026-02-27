@@ -4,6 +4,7 @@
 #define PRINT_TRI23(T,F) printf("triangle((%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F ")),",T.a.x,T.a.y,0,T.b.x,T.b.y,0,T.c.x,T.c.y,0)
 #include<stdio.h>
 FILE* debug=fopen("./debug/debug.log","w");
+bool logmisc=false;
 #include <r@@2e.hpp>
 #include <3rats.hpp>
 #include <assets.hpp>
@@ -31,18 +32,21 @@ int main() {
       }
       escapes=0;
       // continue;
-    }
-    switch(c){
-      case 'w':mesh::camera_position.x+=1;break;
-      case 's':mesh::camera_position.x-=1;break;
-      case 'd':mesh::camera_position.y+=1;break;
-      case 'a':mesh::camera_position.y-=1;break;
-      case 'x':{
-        gui::clear_scr();
-        for(short unsigned int i=0;i<models[0].tricount;i++){
-          gui::drawMTri(models[0].tris[i]);
+    }else{
+      switch(c){
+        case 'w':mesh::camera_position.x+=1;break;
+        case 's':mesh::camera_position.x-=1;break;
+        case 'd':mesh::camera_position.y+=1;break;
+        case 'a':mesh::camera_position.y-=1;break;
+        case 'x':{
+          gui::clear_scr();
+          for(short unsigned int i=0;i<models[0].tricount;i++){
+            gui::drawMTri(models[0].tris[i]);
+          }
+          assets::writeGrayScaleToPPM("debug/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
         }
-        assets::writeGrayScaleToPPM("debug/frame.ppm",gui::depth_buffer,gui::term_dims.ws_col,gui::term_dims.ws_row);
+        break;
+        case 'e':logmisc=!logmisc;break;
       }
     }
     if(c){
@@ -53,7 +57,7 @@ int main() {
         if(mode==0){gui::drawMTri(models[0].tris[i]);}
         if(mode==1){gui::drawMLines(models[0].tris[i]);}
       }
-      fputs("\n",debug);
+      if(logmisc){fputs("\n",debug);}
       gui::drawFrame();
       escapes=0;
     }

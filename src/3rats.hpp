@@ -125,71 +125,134 @@ namespace mesh {
     rotate(v.a.x,v.a.y,d);rotate(v.b.x,v.b.y,d);rotate(v.c.x,v.c.y,d);
     return v;
   }
-  template<typename T> vec3<T>* clipTriX(const tri3<T>& t,T x){//012,230
+  template<typename T> requires std::is_signed_v<T> vec3<T>* clipTriX(const tri3<T>& t,T x){//012,230
     vec3<T>* out=(vec3<T>*)malloc(sizeof(vec3<T>)*4);
-#define p0 out[0]
-#define p1 out[1]
-#define p2 out[2]//could just reorder a few references instead of using if/else and twould likely be faster
-#define p3 out[3]//ari do that if you ever see this
-    p0=t.a;p1=t.b;p2=t.c;p3={0,0,0};
-    char v=(p0.x>x)+(p1.x>x)+(p2.x>x);
+    #define p0 t.a
+    #define p1 t.b
+    #define p2 t.c
+    #define o0 out[0]
+    #define o1 out[1]
+    #define o2 out[2]
+    #define o3 out[3]
+    o3={0,0,0};
+    char v=(p0.x>=x)+(p1.x>=x)+(p2.x>=x);
     switch(v){
       case 0:break;
       case 1:{
-        if(p0.x>x){
-          p1.y=(p0.y-p1.y)/(p0.x-p1.x)*(x-p1.x)+p1.y;
-          p1.z=(p0.z-p1.z)/(p0.x-p1.x)*(x-p1.x)+p1.z;
-          p1.x=x;
-          p2.y=(p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y;
-          p2.z=(p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z;
-          p2.x=x;
-        }else if(p1.x>x){
-          p0.y=(p1.y-p0.y)/(p1.x-p0.x)*(x-p0.x)+p0.y;
-          p0.z=(p1.z-p0.z)/(p1.x-p0.x)*(x-p0.x)+p0.z;
-          p0.x=x;
-          p2.y=(p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y;
-          p2.z=(p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z;
-          p2.x=x;
+        if(p0.x>=x){
+          o0=p0;
+          o1={
+            x,
+            (p0.y-p1.y)/(p0.x-p1.x)*(x-p1.x)+p1.y,
+            (p0.z-p1.z)/(p0.x-p1.x)*(x-p1.x)+p1.z
+          };
+          o2={
+            x,
+            (p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y,
+            (p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z
+          };
+        }else if(p1.x>=x){
+          o0={
+            x,
+            (p1.y-p0.y)/(p1.x-p0.x)*(x-p0.x)+p0.y,
+            (p1.z-p0.z)/(p1.x-p0.x)*(x-p0.x)+p0.z
+          };
+          o1=p1;
+          o2={
+            x,
+            (p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y,
+            (p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z
+          };
         }else{
-          p0.y=(p2.y-p0.y)/(p2.x-p0.x)*(x-p0.x)+p0.y;
-          p0.z=(p2.z-p0.z)/(p2.x-p0.x)*(x-p0.x)+p0.z;
-          p0.x=x;
-          p1.y=(p2.y-p1.y)/(p2.x-p1.x)*(x-p1.x)+p1.y;
-          p1.z=(p2.z-p1.z)/(p2.x-p1.x)*(x-p1.x)+p1.z;
-          p1.x=x;
+          o0={
+            x,
+            (p2.y-p0.y)/(p2.x-p0.x)*(x-p0.x)+p0.y,
+            (p2.z-p0.z)/(p2.x-p0.x)*(x-p0.x)+p0.z
+          };
+          o1={
+            x,
+            (p2.y-p1.y)/(p2.x-p1.x)*(x-p1.x)+p1.y,
+            (p2.z-p1.z)/(p2.x-p1.x)*(x-p1.x)+p1.z
+          };
+          o2=p2;
         }
         break;
       }
       case 2:{
-        if(p0.x<=x){
-          p3.y=(p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y;
-          p3.z=(p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z;
-          p3.x=x;
-          p0.y=(p1.y-p0.y)/(p1.x-p0.x)*(x-p0.x)+p0.y;
-          p0.z=(p1.z-p0.z)/(p1.x-p0.x)*(x-p0.x)+p0.z;
-          p0.x=x;
-        }else if(p1.x<=x){
-          p3=p2;
-          p2.y=(p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y;
-          p2.z=(p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z;
-          p2.x=x;
-          p1.y=(p0.y-p1.y)/(p0.x-p1.x)*(x-p1.x)+p1.y;
-          p1.z=(p0.z-p1.z)/(p0.x-p1.x)*(x-p1.x)+p1.z;
-          p1.x=x;
+        if(p0.x<x){
+          o0={
+            x,
+            (p1.y-p0.y)/(p1.x-p0.x)*(x-p0.x)+p0.y,
+            (p1.z-p0.z)/(p1.x-p0.x)*(x-p0.x)+p0.z
+          };
+          o1=p1;
+          o2=p2;
+          o3={
+            x,
+            (p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y,
+            (p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z
+          };
+        }else if(p1.x<x){
+          o0=p0;
+          o1={
+            x,
+            (p0.y-p1.y)/(p0.x-p1.x)*(x-p1.x)+p1.y,
+            (p0.z-p1.z)/(p0.x-p1.x)*(x-p1.x)+p1.z
+          };
+          o2={
+            x,
+            (p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y,
+            (p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z
+          };
+          o3=p2;
         }else{
-          p3.y=(p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y;
-          p3.z=(p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z;
-          p3.x=x;
-          p2.y=(p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y;
-          p2.z=(p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z;
-          p2.x=x;
+          o0=p0;
+          o1=p1;
+          o2={
+            x,
+            (p1.y-p2.y)/(p1.x-p2.x)*(x-p2.x)+p2.y,
+            (p1.z-p2.z)/(p1.x-p2.x)*(x-p2.x)+p2.z
+          };
+          o3={
+            x,
+            (p0.y-p2.y)/(p0.x-p2.x)*(x-p2.x)+p2.y,
+            (p0.z-p2.z)/(p0.x-p2.x)*(x-p2.x)+p2.z
+          };
         }
+        break;
+      }
+      case 3:{
+        return_original:
+        o0=t.a;o1=t.b;o2=t.c;
       }
     }
+    // if(logmisc){
+    //   float l=max(p0.x,p1.x,p2.x);
+    //   if(
+    //     (std::fpclassify(o0.y)==FP_INFINITE)||(std::fpclassify(o0.z)==FP_INFINITE)||
+    //     (std::fpclassify(o1.y)==FP_INFINITE)||(std::fpclassify(o1.z)==FP_INFINITE)||
+    //     (std::fpclassify(o2.y)==FP_INFINITE)||(std::fpclassify(o2.z)==FP_INFINITE)||
+    //     (o0.x<x)||(o1.x<x)||(o2.x<x)||((o3.x!=0)&&(o3.x<x))||
+    //     (o0.x>l)||(o1.x>l)||(o2.x>l)||((o3.x!=0)&&(o3.x>l))
+    //   ){
+    //     fprintf(debug,"\nBAD CASE:%u;%0.1u%0.1u%0.1u\norig max x=%f\ntriangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f))\n[(%f,%f,%f),(%f,%f,%f),(%f,%f,%f),(%f,%f,%f)]\n\n",
+    //       v,(p0.x>=x),(p1.x>=x),(p2.x>=x),l,
+    //       p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z,
+    //       o0.x,o0.y,o0.z, o1.x,o1.y,o1.z, o2.x,o2.y,o2.z, o3.x,o3.y,o3.z);
+    //   }else{
+    //     // fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z);
+    //     fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",o0.x,o0.y,o0.z, o1.x,o1.y, o1.z,o2.x,o2.y,o2.z);
+    //     if(o3.x){fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",}
+    //   }
+    // }
     return out;
-#undef p0
-#undef p1
-#undef p2
+    #undef p0
+    #undef p1
+    #undef p2
+    #undef o0
+    #undef o1
+    #undef o2
+    #undef o3
   }
   vec3<mesh_size> camera_position{-5.0f,0.0f,0.0f};
   vec3<char>      camera_rotation{0,0,0};//roll pitch yaw
@@ -254,28 +317,16 @@ namespace gui {
     putChar(x1,y1,'+');
     putChar(x2,y2,'+');
   }
-  void drawMTri(const meshtri& t){
-    tri3<mesh_size> t1=t-camera_position;
-    rotateT(t1,camera_rotation.z);
-    vec3<mesh_size>* clipped=clipTriX(t1,1.0f);
-    fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",clipped[0].x,clipped[0].y,clipped[0].z,clipped[1].x,clipped[1].y,clipped[1].z,clipped[2].x,clipped[2].y,clipped[2].z);
-    t1.a=clipped[0];
-    t1.b=clipped[1];
-    t1.c=clipped[2];
-    if(clipped[3].x!=0.0f){
-      meshtri t2=t;
-      t2.a=clipped[2];
-      t2.b=clipped[3];
-      t2.c=clipped[0];
-      fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",clipped[2].x,clipped[2].y,clipped[2].z,clipped[3].x,clipped[3].y,clipped[3].z,clipped[0].x,clipped[0].y,clipped[0].z);
-      drawMTri(t2);//dont recurr more than once please :3
-    }
-    free(clipped);
+  void drawTri(const tri3<mesh_size>& t1){
     mesh_size z0=t1.a.x,z1=t1.b.x,z2=t1.c.x;
     scoord x0=toSSPX(t1.a.y,z0),y0=toSSPY(t1.a.z,z0),
            x1=toSSPX(t1.b.y,z1),y1=toSSPY(t1.b.z,z1),
            x2=toSSPX(t1.c.y,z2),y2=toSSPY(t1.c.z,z2);
     scoord minx=max(min(x0,x1,x2),0),miny=max(min(y0,y1,y2),0),maxx=min(max(x0,x1,x2),gui::term_dims.ws_col),maxy=min(max(y0,y1,x2),gui::term_dims.ws_row);
+    if(logmisc){
+      fprintf(debug,"(%u,%u),(%u,%u)\npolygon((%u,%u),(%u,%u),(%u,%u))\n",minx,miny,maxx,maxy,x0,y0,x1,y1,x2,y2);
+      fflush(debug);
+    }
     for(scoord x=minx;x<maxx;x++){
       for(scoord y=miny;y<maxy;y++){
         vec3<float> barycentric;
@@ -313,6 +364,27 @@ namespace gui {
         }
       }
     }
+  }
+  void drawMTri(const meshtri& t){
+    tri3<mesh_size> t1=t-camera_position;
+    rotateT(t1,camera_rotation.z);
+    char v=(t1.a.x<1)+(t1.b.x<1)+(t1.c.x<1);
+    if(v==3){return;}
+    if(v!=0){
+      vec3<mesh_size>* clipped=clipTriX(t1,1.0f);
+      t1.a=clipped[0];
+      t1.b=clipped[1];
+      t1.c=clipped[2];
+      if(clipped[3].x!=0.0f){
+        meshtri t2=t;
+        t2.a=clipped[2];
+        t2.b=clipped[3];
+        t2.c=clipped[0];
+        drawTri(t2);//dont recurr more than once please :3
+      }
+      free(clipped);
+    }
+    drawTri(t1);
   }
   void drawMLines(const meshtri& t){
     tri3<mesh_size> t1=t-camera_position;

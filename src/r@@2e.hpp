@@ -150,7 +150,7 @@ namespace gui {
   }
 
   void drawFrame(){
-    DO(fwrite("\x1b[2J\x1b[0;0H",1,10,stdout)<10)ORDIE("couldn't write control codes to terminal");
+    DO(fwrite("\x1b[2J\x1b[0;0H\x1b[0m",1,10,stdout)<10)ORDIE("couldn't write control codes to terminal");
     color_t last_color_fg=color_buffer[0]&0x0F;
     color_t last_color_bg=color_buffer[0]&0xF0;
     scoord last_char=0;
