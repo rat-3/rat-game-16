@@ -8,7 +8,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
-#include <type_traits>
 #include <colors.hpp>
 #define DO(x) if(x)
 #define ORDIE(s) {::gui::stop(s);exit(1);}
@@ -129,9 +128,9 @@ namespace gui {
   }
 
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
-  inline scoord toSSPX(T x,T d){return (scoord)((x/d+1)*term_dims.ws_col/2);}
+  inline scoord toSSPX(T x,T d){return (scoord)min(max((x/d+1)*term_dims.ws_col/2,0),term_dims.ws_col);}
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
-  inline scoord toSSPY(T y,T d){return (scoord)((y/d+1)*term_dims.ws_row/2);}
+  inline scoord toSSPY(T y,T d){return (scoord)min(max((y/d+1)*term_dims.ws_row/2,0),term_dims.ws_row);}
   inline scoord toSSPI(scoord x,scoord y){return (y*term_dims.ws_col)+x;}
 
   char putChar(scoord x,scoord y,unsigned char c){

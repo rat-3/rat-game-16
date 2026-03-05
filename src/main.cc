@@ -3,8 +3,21 @@
 #define PRINT_TRI2(T,F) printf("polygon((%" #F ",%" #F "),(%" #F ",%" #F "),(%" #F ",%" #F ")),",T.a.x,T.a.y,T.b.x,T.b.y,T.c.x,T.c.y)
 #define PRINT_TRI23(T,F) printf("triangle((%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F "),(%" #F ",%" #F ",%" #F ")),",T.a.x,T.a.y,0,T.b.x,T.b.y,0,T.c.x,T.c.y,0)
 #include<stdio.h>
+#include <type_traits>
 FILE* debug=fopen("./debug/debug.log","w");
 bool logmisc=false;
+template<typename T> concept arith=std::is_arithmetic_v<T>;
+template<typename T> concept comp =requires(T a,T b){a<b;a>b;a==b;};
+template<comp T,comp U> T constexpr min(T a,U b){return a<b?a:b;}
+template<comp T,comp U> T constexpr max(T a,U b){return a<b?b:a;}
+template<comp T,comp...U> T constexpr min(T t, U...a){
+  T b=min(a...);
+  return t<b?t:b;
+}
+template<comp T,comp...U> T constexpr max(T t, U...a){
+  T b=max(a...);
+  return t<b?b:t;
+}
 #include <r@@2e.hpp>
 #include <3rats.hpp>
 #include <assets.hpp>
@@ -55,7 +68,7 @@ int main() {
       // fseek(stdout,-1,SEEK_CUR);
       for(short unsigned int i=0;i<models[0].tricount;i++){
         if(mode==0){gui::drawMTri(models[0].tris[i]);}
-        if(mode==1){gui::drawMLines(models[0].tris[i]);}
+        // if(mode==1){gui::drawMLines(models[0].tris[i]);}
       }
       if(logmisc){fputs("\n",debug);}
       gui::drawFrame();

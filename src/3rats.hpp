@@ -9,18 +9,7 @@
 #define MESHTRI_OUTLN_01 0b00000001
 #define MESHTRI_OUTLN_12 0b00000010
 #define MESHTRI_OUTLN_20 0b00000100
-template<typename T> concept arith=std::is_arithmetic_v<T>;
-template<typename T> concept comp =requires(T a,T b){a<b;a>b;a==b;};
-template<comp T,comp U> T constexpr min(T a,U b){return a<b?a:b;}
-template<comp T,comp U> T constexpr max(T a,U b){return a<b?b:a;}
-template<comp T,comp...U> T constexpr min(T t, U...a){
-  T b=min(a...);
-  return t<b?t:b;
-}
-template<comp T,comp...U> T constexpr max(T t, U...a){
-  T b=max(a...);
-  return t<b?b:t;
-}
+#define PRINTTRI(H,T,F) fprintf(H,"triangle((% ## F,% ## F,% ## F),(% ## F,% ## F,% ## F),(% ## F,% ## F,% ## F)),",T.a.x,T.a.y,T.a.z,T.b.x,T.b.y,T.b.z,T.c.x,T.c.y,T.c.z)
 template<arith T> inline auto constexpr triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   if constexpr(std::is_integral_v<T>){
     using sT=std::make_signed_t<T>;
@@ -265,58 +254,6 @@ namespace gui {
   inline tri2<scoord> toSSPT(tri3<mesh_size> t){
     return (tri2<scoord>){toSSPV(t.a),toSSPV(t.b),toSSPV(t.c)};
   }
-  void drawLine(scoord x0,scoord y0,mesh_size z0,scoord x1,scoord y1,mesh_size z1){
-    signed short int dx=(signed short int)x1-x0;
-    signed short int dy=(signed short int)y1-y0;
-    scoord &x0_=(x0<x1?x0:x1),&x1_=(x0_==x0?x1:x0),&y0_=(x0_==x0?y0:y1),&y1_=(x0_==x0?y1:y0);
-    mesh_size &z0_=(x0_==x0?z0:z1),&z1_=(x0_==x0?z1:z0);
-    if((abs(dx)>abs(dy))&&(dx!=0)){
-      float m=(float)dy/dx;
-      float mz=(z1-z0)/(dx);
-      scoord ly=(x0_>0)?m*(-1)+y0_:y0_;
-      scoord ny=y0_;
-      char c=(m>0)?'\\':'/';
-      for(scoord x=x0_;x<x1_;){
-        scoord y=ny;
-        float d=mz*(x-x0_)+z0_;
-        if(depth_buffer[x+y*term_dims.ws_col]>(d/FARPLANEX*255)){
-          depth_buffer[x+y*term_dims.ws_col]=(d/FARPLANEX*255);
-          putChar(x,y,(y!=ly||y!=ny)?c:'-');
-        }
-        ly=y;
-        ny=m*(++x-x0_)+y0_;
-      }
-    }else{
-      float m=(float)dx/dy;
-      float mz=(z1-z0)/(dy);
-      scoord lx=(y0_>0)?m*(-1)+x0_:x0_;
-      scoord nx=x0_;
-      char c=(m>0)?'\\':'/';
-      for(scoord y=y0_;y<y1_;){
-        scoord x=nx;
-        float d=mz*(y-y0_)+z0_;
-        if(depth_buffer[x+y*term_dims.ws_col]>(d/FARPLANEX*255)){
-          depth_buffer[x+y*term_dims.ws_col]=(d/FARPLANEX*255);
-          putChar(x,y,(x!=lx||x!=nx)?c:'|');
-        }
-        lx=x;
-        nx=m*(++y-y0_)+x0_;
-      }
-    }
-  }
-  void drawCTri(scoord x0,scoord y0,scoord x1,scoord y1,scoord x2,scoord y2){
-    scoord minx=max(min(x0,x1,x2),0),miny=max(min(y0,y1,y2),0),maxx=min(max(x0,x1,x2),gui::term_dims.ws_col),maxy=min(max(y0,y1,x2),gui::term_dims.ws_row);
-    for(scoord x=minx;x<maxx;x++){
-      for(scoord y=miny;y<maxy;y++){
-        if(triarea(x,y,x1,y1,x2,y2)>=0){if(triarea(x0,y0,x,y,x2,y2)>=0){if(triarea(x0,y0,x1,y1,x,y)>=0){
-          putChar(x,y,'#');
-        }}}
-      }
-    }
-    putChar(x0,y0,'+');
-    putChar(x1,y1,'+');
-    putChar(x2,y2,'+');
-  }
   void drawTri(const tri3<mesh_size>& t1){
     mesh_size z0=t1.a.x,z1=t1.b.x,z2=t1.c.x;
     scoord x0=toSSPX(t1.a.y,z0),y0=toSSPY(t1.a.z,z0),
@@ -324,7 +261,8 @@ namespace gui {
            x2=toSSPX(t1.c.y,z2),y2=toSSPY(t1.c.z,z2);
     scoord minx=max(min(x0,x1,x2),0),miny=max(min(y0,y1,y2),0),maxx=min(max(x0,x1,x2),gui::term_dims.ws_col),maxy=min(max(y0,y1,x2),gui::term_dims.ws_row);
     if(logmisc){
-      fprintf(debug,"(%u,%u),(%u,%u)\npolygon((%u,%u),(%u,%u),(%u,%u))\n",minx,miny,maxx,maxy,x0,y0,x1,y1,x2,y2);
+      // fprintf(debug,"(%u,%u),(%u,%u)\npolygon((%u,%u),(%u,%u),(%u,%u))\n",minx,miny,maxx,maxy,x0,y0,x1,y1,x2,y2);
+      PRINTTRI(debug,t1,f);
       fflush(debug);
     }
     for(scoord x=minx;x<maxx;x++){
@@ -385,17 +323,6 @@ namespace gui {
       free(clipped);
     }
     drawTri(t1);
-  }
-  void drawMLines(const meshtri& t){
-    tri3<mesh_size> t1=t-camera_position;
-    rotateT(t1,camera_rotation.z);
-    mesh_size z0=t1.a.x,z1=t1.b.x,z2=t1.c.x;
-    scoord x0=toSSPX(t1.a.y,z0),y0=toSSPY(t1.a.z,z0),
-           x1=toSSPX(t1.b.y,z1),y1=toSSPY(t1.b.z,z1),
-           x2=toSSPX(t1.c.y,z2),y2=toSSPY(t1.c.z,z2);
-    drawLine(x0,y0,z0,x1,y1,z1);
-    drawLine(x1,y1,z1,x2,y2,z2);
-    drawLine(x2,y2,z2,x0,y0,z0);
   }
 }
 #endif
