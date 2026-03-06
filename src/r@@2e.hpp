@@ -8,7 +8,6 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
-#include <type_traits>
 #include <colors.hpp>
 #define DO(x) if(x)
 #define ORDIE(s) {::gui::stop(s);exit(1);}
@@ -57,9 +56,11 @@ namespace gui {
   void stop(const char* err){
     if(state&STATE_ICLR){return;}
     BRKST(SIGS,
+      printf("\n\rrestoring sigset\n\r");
       if(sigprocmask(SIG_SETMASK,&old_sigset,NULL)==-1){perror("couldn't restore signal set");}
     )
     BRKST(TERM,
+      printf("restoring terminal state\n\r");
       if(tcsetattr(STDIN_FILENO,TCSAFLUSH,&old_term_state)){perror("couldn't to restore terminal state");}
     )
     BRKST(TBUF,if(term_buffer){free(term_buffer);term_buffer=NULL;max_chars=0;})
@@ -68,7 +69,7 @@ namespace gui {
     if(err){perror(err);}
     state|=STATE_ICLR;
   }
-  void stop() {state|=STATE_ICLR;stop(NULL);}
+  void stop() {stop(NULL);}
 
   void sig_handler(int sig){
     printf("bazinga%u",sig);
@@ -84,11 +85,10 @@ namespace gui {
   void init(){
     //make sure we're not doing things twice. idiot.
     DO(state)ORDIE("couldn't init r@@2e: we already started");
+    atexit(stop);
 
     //get starting terminal state so we can put it back once we're done
     DO(tcgetattr(STDIN_FILENO,&old_term_state))ORDIE("coudln't get initial terminal state");
-    atexit(stop);
-    state|=STATE_TERM;
 
     //set various terminal flags
     cur_term_state=old_term_state;
@@ -96,6 +96,7 @@ namespace gui {
     cur_term_state.c_cc[VMIN] =0;//double 0 means return asap and 0 if nothing's available
     cur_term_state.c_cc[VTIME]=0;
     DO(set_term_flags(RAWMODE_LFLAGS,RAWMODE_IFLAGS,RAWMODE_OFLAGS))ORDIE("couldn't set terminal state");
+    state|=STATE_TERM;
 
     //block the TTOU signal which triggers program stop when trying to write to terminal from a background process
     DO(sigemptyset(&cur_sigset)==-1)                      ORDIE("couldn't initialize empty signal set");
@@ -132,7 +133,7 @@ namespace gui {
   inline scoord toSSPX(T x,T d){return (scoord)((x/d+1)*term_dims.ws_col/2);}
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
   inline scoord toSSPY(T y,T d){return (scoord)((y/d+1)*term_dims.ws_row/2);}
-  inline scoord toSSPI(scoord x,scoord y){return (y*term_dims.ws_col)+x;}
+  inline scoord toSSPI(scoord x,scoord y){return min((y*term_dims.ws_col)+x+1,max_chars);}
 
   char putChar(scoord x,scoord y,unsigned char c){
     scoord p=toSSPI(x,y);
@@ -150,7 +151,7 @@ namespace gui {
   }
 
   void drawFrame(){
-    DO(fwrite("\x1b[2J\x1b[0;0H",1,10,stdout)<10)ORDIE("couldn't write control codes to terminal");
+    DO(fwrite("\x1b[2J\x1b[0;0H\x1b[0m",1,10,stdout)<10)ORDIE("couldn't write control codes to terminal");
     color_t last_color_fg=color_buffer[0]&0x0F;
     color_t last_color_bg=color_buffer[0]&0xF0;
     scoord last_char=0;

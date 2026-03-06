@@ -10,7 +10,7 @@ if [ "$1" = "debug" ];then
       exit 1
     fi
     echo preprocessing success
-  elif [ "$2" = "build" ] || [ "$2" = "core" ];then
+  else
     g++ -std="c++20" -I./src -g ./src/main.cc -o ./debug/debug.out 2>log.txt #change something maybe
     if test $(stat -c%s ./log.txt) -gt 1; then
       echo debug didn\'t compile \:\(
