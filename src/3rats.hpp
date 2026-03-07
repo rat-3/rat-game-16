@@ -9,7 +9,6 @@
 #define MESHTRI_OUTLN_01 0b00000001
 #define MESHTRI_OUTLN_12 0b00000010
 #define MESHTRI_OUTLN_20 0b00000100
-#define PRINTTRI(H,T,F) fprintf(H,"triangle((% ## F,% ## F,% ## F),(% ## F,% ## F,% ## F),(% ## F,% ## F,% ## F)),",T.a.x,T.a.y,T.a.z,T.b.x,T.b.y,T.b.z,T.c.x,T.c.y,T.c.z)
 template<arith T> inline auto constexpr triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   if constexpr(std::is_integral_v<T>){
     using sT=std::make_signed_t<T>;
@@ -215,25 +214,6 @@ namespace mesh {
         o0=t.a;o1=t.b;o2=t.c;
       }
     }
-    // if(logmisc){
-    //   float l=max(p0.x,p1.x,p2.x);
-    //   if(
-    //     (std::fpclassify(o0.y)==FP_INFINITE)||(std::fpclassify(o0.z)==FP_INFINITE)||
-    //     (std::fpclassify(o1.y)==FP_INFINITE)||(std::fpclassify(o1.z)==FP_INFINITE)||
-    //     (std::fpclassify(o2.y)==FP_INFINITE)||(std::fpclassify(o2.z)==FP_INFINITE)||
-    //     (o0.x<x)||(o1.x<x)||(o2.x<x)||((o3.x!=0)&&(o3.x<x))||
-    //     (o0.x>l)||(o1.x>l)||(o2.x>l)||((o3.x!=0)&&(o3.x>l))
-    //   ){
-    //     fprintf(debug,"\nBAD CASE:%u;%0.1u%0.1u%0.1u\norig max x=%f\ntriangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f))\n[(%f,%f,%f),(%f,%f,%f),(%f,%f,%f),(%f,%f,%f)]\n\n",
-    //       v,(p0.x>=x),(p1.x>=x),(p2.x>=x),l,
-    //       p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z,
-    //       o0.x,o0.y,o0.z, o1.x,o1.y,o1.z, o2.x,o2.y,o2.z, o3.x,o3.y,o3.z);
-    //   }else{
-    //     // fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",p0.x,p0.y,p0.z, p1.x,p1.y,p1.z, p2.x,p2.y,p2.z);
-    //     fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",o0.x,o0.y,o0.z, o1.x,o1.y, o1.z,o2.x,o2.y,o2.z);
-    //     if(o3.x){fprintf(debug,"triangle((%f,%f,%f),(%f,%f,%f),(%f,%f,%f)),",}
-    //   }
-    // }
     return out;
     #undef p0
     #undef p1
@@ -268,8 +248,7 @@ namespace gui {
                 SCAST(float,x1),SCAST(float,y1),
                 SCAST(float,x2),SCAST(float,y2));
     if(logmisc){
-      // fprintf(debug,"(%u,%u),(%u,%u)\npolygon((%u,%u),(%u,%u),(%u,%u))\n",minx,miny,maxx,maxy,x0,y0,x1,y1,x2,y2);
-      PRINTTRI(debug,t1,f);
+      PRINT_TRI3(debug,t1,f);
       fflush(debug);
     }
     for(scoord x=minx;x<maxx;x++){

@@ -95,7 +95,7 @@ namespace assets {
   }
   void writeGrayScaleToPPM(const char* name,const unsigned char* buf,size_t width,size_t height){
     FILE* file=fopen(name,"w");
-    fprintf(file,"P3 %u %u 255\n",width,height*3);
+    fprintf(file,"P3 %lu %lu 255\n",width,height*3);
     for(int i=0;i<height;i++){
       for(int j=0;j<width;j++){
         fprintf(file,"%3u %3u %3u ",buf[i*width+j],buf[i*width+j],buf[i*width+j]);
