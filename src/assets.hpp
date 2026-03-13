@@ -7,7 +7,7 @@
 #include <type_traits>
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 #define DO(x) if(x)
-#define ABORT fclose(file);if(tmp){free(tmp);};exit(1);
+#define ABORT if(file){fclose(file);file=NULL;}if(tmp){free(tmp);tmp=NULL;};exit(1);
 #define ORDIE(s) {perror(s);ABORT}
 #define FEXPECTL(EXP_STR,EXP_STR_LEN)\
 fgets(tmp,128,file);\
@@ -28,7 +28,7 @@ tmp[VAR]='\0';VAR=atoi(tmp);
 #define NSPACEL(VAR) while((tmp[VAR]!=' ')&&(tmp[VAR]!='\n')){VAR++;}
 static int debug_bad_stl;
 static char* tmp;
-FILE* file;
+static FILE* file;
 namespace assets {
   static void int_fexpectl(const char* EXP_STR,int EXP_STR_LEN){
     int i;
@@ -128,9 +128,6 @@ namespace assets {
     tmp = (char*)malloc(128);
     DO(!file){memcpy(tmp,"couldn't open file for read: ",30);strcat(tmp,filename);perror(tmp);ABORT};
     int i=0;
-    FILE* file = fopen(filename, "r");
-    if(!file){ perror("couldn't open texture"); exit(1); }
-    char* temp = (char*)malloc(128);
     int width, height, maxVal;
     char format=0;
     printf("reading file %s:",filename);
