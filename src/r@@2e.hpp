@@ -26,6 +26,19 @@
 #define STATE_PMDS 0b01000000
 #define STATE_ICLR 0b10000000
 namespace gui {
+  float screen_scale = tan(mesh::fov/2.0f);
+  using namespace mesh;
+  void updateFrustum(){
+    planes[NEAR].D=nearplanex;
+    planes[LEFT]   = (plane_t){vec3<float>{(float)cos(fov/2.0f),(float)sin(fov/2.0f),0},0};
+    planes[RIGHT]  = (plane_t){vec3<float>{(float)cos(fov/2.0f),(float)-sin(fov/2.0f),0},0};
+    planes[BOTTOM] = (plane_t){vec3<float>{(float)cos(fov/2.0f),0,(float)sin(fov/2.0f)},0};
+    planes[TOP]    = (plane_t){vec3<float>{(float)cos(fov/2.0f),0,(float)-sin(fov/2.0f)},0};
+  }
+  void update_fov(){
+    screen_scale=tan(mesh::fov/2.0f);
+    updateFrustum();
+  }
   menu_t* selected_menu;
   scoord selected_btn;
   using namespace colors;
@@ -182,9 +195,9 @@ namespace gui {
   }
 
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
-  inline const scoord toSSPX(T x,T d){return (scoord)((x/d+1)*term_dims.ws_col/2);}
+  inline const scoord toSSPX(T x,T d){return (scoord)(((x/d)*(term_dims.ws_col*screen_scale/2))+term_dims.ws_col/2);}
   template<typename T> requires (std::is_arithmetic_v<T>)&&(std::is_signed_v<T>)
-  inline const scoord toSSPY(T y,T d){return (scoord)((y/d+1)*term_dims.ws_row/2);}
+  inline const scoord toSSPY(T y,T d){return (scoord)(((y/d)*(term_dims.ws_row*screen_scale/2))+term_dims.ws_row/2);}
   inline const scoord toSSPI(scoord x,scoord y){return min(y,term_dims.ws_row-1)*term_dims.ws_col+min(x,term_dims.ws_col-1);}
 
   char putChar(scoord x,scoord y,unsigned char c){

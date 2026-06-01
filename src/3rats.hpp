@@ -8,6 +8,7 @@
 #define MESHTRI_OUTLN_01 0b00000001
 #define MESHTRI_OUTLN_12 0b00000010
 #define MESHTRI_OUTLN_20 0b00000100
+
 template<arith T> inline auto constexpr triarea(T x0,T y0,T x1,T y1,T x2,T y2){
   if constexpr(std::is_integral_v<T>){
     using sT=std::make_signed_t<T>;
@@ -27,6 +28,67 @@ namespace mesh {
   template<typename T> constexpr inline tri3<T> rotateT(tri3<T>& v,signed char d){
     rotate(v.a.x,v.a.y,d);rotate(v.b.x,v.b.y,d);rotate(v.c.x,v.c.y,d);
     return v;
+  }
+  int clipModelPlane(model_t m, plane_t p, vec3<float> c, vec3<char> r){
+    vec3<float> cen = m.getCenter()-c;rotate(cen.x,cen.y,r.z);
+  
+    float sd = p.signedDistance(cen);
+    float mr = m.getRadius();
+    if (sd > mr){
+      return 0;
+    }else if (sd < -mr){
+      return 1;
+    }else{
+      return 2;
+    }
+  }
+  int clipTriPlane(tri3<float> t, plane_t p, vec3<float> c, vec3<char> r){
+    vec3<float> cen = t.getCenter()-c;rotate(cen.x,cen.y,r.z);
+    float sd = p.signedDistance(cen);
+    float mr = t.getRadius();
+    if (sd > mr){
+      return 0;
+    }else if (sd < -mr){
+      return 1;
+    }else{
+      return 2;
+    }
+  } 
+  template<typename T> int clipTri(tri3<T> t, vec3<float> c, vec3<char> r){
+    int ret=0;
+    for (int i = 0; i < 5; i++){
+      int tc = clipTriPlane(t,planes[i],c,r);
+      switch(tc){
+        case (0):{
+          continue;
+        };break;
+        case(1):{
+          return 1;
+        };break;
+        case(2):{
+          ret=2;
+        };break;
+      }
+    }
+    return ret;
+  }
+  int clipModel(model_t m, vec3<float> c, vec3<char> r){
+    int ret = 0;
+    for (int i = 0; i < 5; i++){
+      int cmp = clipModelPlane(m, planes[i],c,r);
+      switch (cmp){
+        case(0):{
+          continue;
+        };break;
+        case(1):{
+          return 1;
+        };break;
+        case(2):{
+          ret = 2;
+        };break;
+      } 
+    }
+    return ret;
   }
   template<typename T> requires std::is_signed_v<T> vec3<T>* clipTriX(const tri3<T>& t,T x){//012,230
     vec3<T>* out=(vec3<T>*)malloc(sizeof(vec3<T>)*4);
@@ -212,10 +274,10 @@ namespace gui {
   void drawMTri(const meshtri& t, assets::texture_t& tex){
     meshtri t1=t-camera_position;
     rotateT(t1,camera_rotation.z);
-    char v=(t1.a.x<1)+(t1.b.x<1)+(t1.c.x<1);
+    char v=(t1.a.x<nearplanex)+(t1.b.x<nearplanex)+(t1.c.x<nearplanex);
     if(v==3){return;}
     if(v!=0){
-      vec3<mesh_size>* clipped=clipTriX(t1,1.0f);//optimize to reuse
+      vec3<mesh_size>* clipped=clipTriX(t1,nearplanex);//optimize to reuse
       meshtri t2{
         clipped[0],
         clipped[1],
@@ -275,6 +337,39 @@ namespace gui {
       }
       free(clipped);
     }else{drawTri(t1, t1.uv0, t1.uv1, t1.uv2, tex);/*merge uvs into tri2<float>*/}
+  }
+  int drawModel(assets::asset3d_t m){
+    vec3<float> mcc = m.mesh.getCenter()-camera_position; rotate(mcc.x,mcc.y,camera_rotation.z);
+    int mc = clipModel(m.mesh, camera_position, camera_rotation);
+    switch(mc){
+      case(0):{
+        for(short unsigned int i=0;i<m.mesh.tricount;i++){
+          drawMTri(m.mesh.tris[i],m.texture);
+        }
+      };break;
+      case(1):{
+        // for(short unsigned int i=0;i<m.mesh.tricount;i++){
+        //   drawMTri(m.mesh.tris[i],m.texture);
+        // }
+      };break;
+      case(2):{
+        for(short unsigned int i=0;i<m.mesh.tricount;i++){
+          int tc = clipTri(m.mesh.tris[i],camera_position,camera_rotation);
+          switch(tc){
+            case(0):{
+              drawMTri(m.mesh.tris[i],m.texture);
+            };break;
+            case(1):{
+              // die
+            };break;
+            case(2):{
+              drawMTri(m.mesh.tris[i],m.texture);
+            };break;
+          }
+        }
+      };break;
+    }
+    return mc;
   }
 }
 #endif

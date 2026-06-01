@@ -117,6 +117,7 @@ int main() {
   loadMenus();
   gamestate.drawFunc=drawMainMenu;
   gui::init();
+  printf("SCREEN INIT: %i,%i\n",gui::term_dims.ws_col,gui::term_dims.ws_row);
   loadSprites();
   unsigned char escapes=0;
   unsigned char rotamnt=16;
@@ -136,8 +137,8 @@ int main() {
     }
     if((escapes&'\x03')=='\x03'){
       switch(c){
-        case 'A':mesh::farplanex++;break;
-        case 'B':mesh::farplanex--;break;
+        case 'A':mesh::fov+=M_PI_4/3.0f;gui::update_fov();break;
+        case 'B':mesh::fov-=M_PI_4/3.0f;gui::update_fov();break;
         case 'C':mesh::camera_rotation.z-=rotamnt;rottrck+=rotamntrad;break;//left
         case 'D':mesh::camera_rotation.z+=rotamnt;rottrck-=rotamntrad;break;//right
       }
@@ -164,7 +165,9 @@ int main() {
     if(c||escapes){
       clock_t t=clock();
       gui::clear_scr();
-      if(gamestate.drawFunc){gamestate.drawFunc();}
+      gui::drawModel(model0);
+      gui::drawModel(model1);
+      gui::putMenu(&menu,1,1);
       gui::drawFrame();
       clock_t t1=clock()-t;
       float s=t1/(float)CLOCKS_PER_SEC;

@@ -1,5 +1,5 @@
 model= cube.stl;
-texture =fried-by-fluoride.ppm;
+texture =cube.ppm;
 #texmap=[
 #  (1.0, 1.0), (-1.0, -1.0), (-1.0, 1.0)
 #]
