@@ -21,6 +21,7 @@ template<comp T,comp...U> T constexpr const max(T t, U...a){
 int main(void){
   char* input=(char*)malloc(128);
   unsigned len,idx;
+  puts("-- RAT GAME 16 DEBUG CLI --");
 #define EXPS(S) if(strncmp(&input[idx],S,strlen(S))){printf("unrecognized input \"%s\", expected \"%s\"!\n",&input[idx],S);goto getInput;}else{idx+=strlen(S);}
 getInput:
   printf("> ");
@@ -45,10 +46,10 @@ getInput:
         colors::color_t color=colors::col((colors::color)c,colors::black);
         char buf[8];buf[7]='\0';
         fputs(colors::ansi_fg(color,buf),stdout);
-        putc('#',stdout);
-        if(!(i%tex.width)){
+        if(i&&!(i%tex.width)){
           puts("");
         }
+        putc('#',stdout);
       }
       puts("\x1b[0m");
       free(tex.pixels);
