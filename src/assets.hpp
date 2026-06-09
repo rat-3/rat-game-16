@@ -157,10 +157,10 @@ namespace assets {
     printf("%ix%i,%i\n",width,height,maxVal);
     out.width=width;out.height=height;out.pixels=(unsigned char*)malloc(3*width*height);
     if(format==1){//ppm3
-      unsigned int r=0,g=0,b=0,j=0;
+      unsigned int r,g,b,j=0;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-compare"
-      while(!feof(file)&&(j<(width*height))){
+      while(!feof(file)&&(j<(width*height))&&!ferror(file)){
         wspace(file,tmp);FGETI(r);
         wspace(file,tmp);FGETI(g);
         wspace(file,tmp);FGETI(b);
@@ -171,9 +171,9 @@ namespace assets {
       }
     }else if(format==2){//ppm6
       wspace(file,tmp);
-      short unsigned int r,g,b;
-      unsigned j;
-      while(!feof(file)&&(j<(width*height))){
+      short unsigned r,g,b;
+      unsigned j=0;
+      while(!feof(file)&&(j<(width*height))&&!ferror(file)){
 #pragma GCC diagnostic pop
         fread(&r,1+(maxVal>255),1,file);
         fread(&g,1+(maxVal>255),1,file);
@@ -181,11 +181,13 @@ namespace assets {
         out.pixels[j*3]  =r*255/maxVal;
         out.pixels[j*3+1]=g*255/maxVal;
         out.pixels[j*3+2]=b*255/maxVal;
+        //fprintf(debug,"%0.3u %0.3u %0.3u\n",r,g,b);
         j++;
       }
     }
     free(tmp);
     tmp=NULL;
+    DO(ferror(file))ORDIE("FUCK SHIT FUCK")
     DO(file){fclose(file);file=NULL;}else ORDIE("???")
     return out;
   }
