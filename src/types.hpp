@@ -2,6 +2,7 @@
 #define TYPES_H
 #include <cstring>
 #include <cstdlib>
+#include <math.h>
 namespace colors {
   enum color:char{//3 bit color 1 bit intensity
     black=0,red,green,brown,blue,purple,cyan,white,

@@ -137,7 +137,7 @@ namespace assets {
     printf("%li triangles\n",tris.size());
     return tris;
   }
-  static texture_t readPPM(const char* filename){
+  texture_t readPPM(const char* filename){
     texture_t out;
     FILE* file=fopen(filename, "r");
     char* tmp = (char*)malloc(128);
