@@ -5,3 +5,4 @@ log.txt
 debug/*
 *.swp
 saved
+.vscode

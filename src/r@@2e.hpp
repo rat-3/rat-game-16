@@ -30,10 +30,10 @@ namespace gui {
   scoord selected_btn;
   using namespace colors;
 
-  const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|/*ISIG|*/IEXTEN),//remember that ~ is bitwise not
+  const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|ISIG|IEXTEN),//remember that ~ is bitwise not
                  RAWMODE_IFLAGS=~(BRKINT|ICRNL|INPCK|ISTRIP|IXON),
                  RAWMODE_OFLAGS=~(OPOST);//terminal bits to set for "raw" mode
-  const int BLOCKED_SIGS=SIGTTOU|SIGSTOP|SIGTTIN|SIGTSTP;
+  const int BLOCKED_SIGS=SIGWINCH;//SIGTTOU|SIGSTOP|SIGTTIN|SIGTSTP;
 
   assets::font_t f_default;
 
@@ -78,6 +78,19 @@ namespace gui {
     return (tcsetattr(STDIN_FILENO,TCSAFLUSH,&cur_term_state));
   }
 
+  void clear_scr(){
+    for(scoord i=0;i<max_chars;i++){term_buffer[i]=' ';depth_buffer[i]=255;color_buffer[i]=default_color;}
+  }
+
+  void free_bufs(){
+    BRKST(TBUF,if(term_buffer){free(term_buffer);term_buffer=NULL;max_chars=0;})
+    BRKST(CBUF,if(color_buffer){free(color_buffer);color_buffer=NULL;})
+    BRKST(DBUF,if(depth_buffer){free(depth_buffer);depth_buffer=NULL;})
+    #ifdef do_debug
+    BRKST(BBUF,if(debug_buffer){free(debug_buffer);debug_buffer=NULL;})
+    #endif
+  }
+
   void stop(const char* err){
     if(state&STATE_ICLR){return;}
     BRKST(ASCR,printf("\x1b[c""\x1b""[?1049l");)
@@ -90,29 +103,44 @@ namespace gui {
       printf("restoring terminal state\n\r");
       if(tcsetattr(STDIN_FILENO,TCSAFLUSH,&old_term_state)){perror("couldn't to restore terminal state");}
     )
-    BRKST(TBUF,if(term_buffer){free(term_buffer);term_buffer=NULL;max_chars=0;})
-    BRKST(CBUF,if(color_buffer){free(color_buffer);color_buffer=NULL;})
-    BRKST(DBUF,if(depth_buffer){free(depth_buffer);depth_buffer=NULL;})
-    #ifdef do_debug
-    BRKST(BBUF,if(debug_buffer){free(debug_buffer);debug_buffer=NULL;})
-    #endif
+    free_bufs();
     if(err){perror(err);}
     state|=STATE_ICLR;
   }
   void stop() {stop(NULL);}
 
-  void sig_handler(int sig){//lowk forgot to make this part work but like who cares
-    printf("bazinga%u",sig);
-    FILE* g = fopen("log","w+");
-    fprintf(g,"%u\n",sig);
+  void term_size_shenanigans(){
+    free_bufs();
+    DO(ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_dims))ORDIE("couldn't get terminal dimensions");
+    max_chars=term_dims.ws_col*term_dims.ws_row;
+    #define tryalloc(A,B,C,D) DO((!(A ## _buffer))&&(A ## _buffer=(B)malloc(C))==NULL)ORDIE("couldn't allocate for " #A);state|=STATE_ ## D;
+    tryalloc(term,char*,max_chars,TBUF);
+    tryalloc(color,color_t*,max_chars,CBUF);
+    tryalloc(depth,unsigned char*,max_chars,DBUF);
+    #ifdef do_debug
+    tryalloc(debug,char*,term_dims.ws_col,BBUF);
+    #endif
+    #undef tryalloc
+    clear_scr();
+  }
+
+  void sig_handler(int signo,siginfo_t* info,void* context){//lowk forgot to make this part work but like who cares
+    FILE* g = fopen("debug/debug.log","w+");
+    fprintf(g,"signal %i(%s/%s)\n",signo,strsignal(signo),sigabbrev_np(signo));
+    if(info){
+      fprintf(g,"  signo=%i\n  code=%i\n  errno=%i(%s)\n  exit=%i\n  value=%i/%p\n",
+      info->si_signo,info->si_code,info->si_errno,strerror(info->si_errno),info->si_status,info->si_value.sival_int,info->si_value.sival_ptr);
+    }
+    if(signo==SIGWINCH){
+      term_size_shenanigans();
+      fprintf(g,"new dimensions:%hux%hu,max chars=%u\n",term_dims.ws_col,term_dims.ws_row,max_chars);
+    }
     fclose(g);
   }
+  void sig_handler_weak(int signo){sig_handler(signo,NULL,NULL);}
 
-  void clear_scr() {
-    for(scoord i=0;i<max_chars;i++){term_buffer[i]=' ';depth_buffer[i]=255;color_buffer[i]=default_color;}
-  }
 
-  void init(){
+ void init(){
     //make sure we're not doing things twice. idiot.
     DO(state)ORDIE("couldn't init r@@2e: we already started");
     puts("INITIALIZING TERMINAL ILLNESS");
@@ -136,22 +164,17 @@ namespace gui {
 
     //block the TTOU signal which triggers program stop when trying to write to terminal from a background process
     DO(sigemptyset(&cur_sigset)==-1)                      ORDIE("couldn't initialize empty signal set");
-    DO(sigaddset(&cur_sigset,BLOCKED_SIGS)==-1)           ORDIE("coudln't add SIGTTOU to the block signal set");
-    DO(sigprocmask(SIG_BLOCK,&cur_sigset,&old_sigset)==-1)ORDIE("couldn't block the signal SIGTTOU");
+    DO(sigaddset(&cur_sigset,BLOCKED_SIGS)==-1)           ORDIE("coudln't add signals to the block signal set");
+    DO(sigprocmask(SIG_BLOCK,&cur_sigset,&old_sigset)==-1)ORDIE("couldn't block the signals");
+    struct sigaction act={0};
+    act.sa_handler=&sig_handler_weak;
+    act.sa_mask=cur_sigset;
+    act.sa_flags=SA_SIGINFO;
+    act.sa_sigaction=&sig_handler;
+    sigaction(SIGWINCH,&act,NULL);
     state|=STATE_SIGS;
 
-    //get some data about what the terminal looks like
-    DO(ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_dims))ORDIE("couldn't get terminal dimensions");
-    max_chars=term_dims.ws_col*term_dims.ws_row;
-#define tryalloc(A,B,C,D) DO((A ## _buffer=(B)malloc(C))==NULL)ORDIE("couldn't allocate for " #A);state|=STATE_ ## D;
-    tryalloc(term,char*,max_chars,TBUF);
-    tryalloc(color,color_t*,max_chars,CBUF);
-    tryalloc(depth,unsigned char*,max_chars,DBUF);
-    #ifdef do_debug
-    tryalloc(debug,char*,term_dims.ws_col,BBUF);
-    #endif
-#undef tryalloc
-    clear_scr();
+    term_size_shenanigans();
     // struct sigaction t;
     // DO(sigaction(SIGTTOU,&t,NULL)==-1)ORDIE("couldn't examine action for ttou"); //double check things work later
   }
