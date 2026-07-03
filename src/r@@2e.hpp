@@ -33,7 +33,7 @@ namespace gui {
   const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|ISIG|IEXTEN),//remember that ~ is bitwise not
                  RAWMODE_IFLAGS=~(BRKINT|ICRNL|INPCK|ISTRIP|IXON),
                  RAWMODE_OFLAGS=~(OPOST);//terminal bits to set for "raw" mode
-  const int BLOCKED_SIGS=SIGWINCH;//SIGTTOU|SIGSTOP|SIGTTIN|SIGTSTP;
+  const int BLOCKED_SIGS=SIGTTOU|SIGSTOP|SIGTTIN|SIGTSTP;
 
   assets::font_t f_default;
 
@@ -109,7 +109,7 @@ namespace gui {
   }
   void stop() {stop(NULL);}
 
-  void term_size_shenanigans(){
+  void winsize_and_realloc(){
     free_bufs();
     DO(ioctl(STDOUT_FILENO, TIOCGWINSZ, &term_dims))ORDIE("couldn't get terminal dimensions");
     max_chars=term_dims.ws_col*term_dims.ws_row;
@@ -124,21 +124,30 @@ namespace gui {
     clear_scr();
   }
 
-  void sig_handler(int signo,siginfo_t* info,void* context){//lowk forgot to make this part work but like who cares
-    FILE* g = fopen("debug/debug.log","w+");
-    fprintf(g,"signal %i(%s/%s)\n",signo,strsignal(signo),sigabbrev_np(signo));
-    if(info){
-      fprintf(g,"  signo=%i\n  code=%i\n  errno=%i(%s)\n  exit=%i\n  value=%i/%p\n",
-      info->si_signo,info->si_code,info->si_errno,strerror(info->si_errno),info->si_status,info->si_value.sival_int,info->si_value.sival_ptr);
+  void processSignal(int signo){
+    if(logmisc){fprintf(debug,"signal %i(%s/%s)\n",signo,strsignal(signo),sigabbrev_np(signo));}
+    switch(signo){
+      case SIGWINCH:
+        winsize_and_realloc();
+        shouldredraw=true;
+        if(logmisc){fprintf(debug,"new dimensions:%hux%hu,max chars=%u\n",term_dims.ws_col,term_dims.ws_row,max_chars);}
+      break;
     }
-    if(signo==SIGWINCH){
-      term_size_shenanigans();
-      fprintf(g,"new dimensions:%hux%hu,max chars=%u\n",term_dims.ws_col,term_dims.ws_row,max_chars);
-    }
-    fclose(g);
   }
-  void sig_handler_weak(int signo){sig_handler(signo,NULL,NULL);}
-
+  void sig_handler(int signo,siginfo_t* info,void* context){//lowk forgot to make this part work but like who cares
+    processSignal(signo);
+    if(logmisc){
+      if(info){
+        fprintf(debug,"  info=%p\n  signo=%i\n  code=%i\n  errno=%i(%s)\n  exit=%i\n  value=%i/%p\n",
+        info,info->si_signo,info->si_code,info->si_errno,strerror(info->si_errno),info->si_status,info->si_value.sival_int,info->si_value.sival_ptr);
+      }
+      fflush(debug);
+    }
+  }
+  void sig_handler_weak(int signo){
+    processSignal(signo);
+    if(logmisc){fflush(debug);}
+  }
 
  void init(){
     //make sure we're not doing things twice. idiot.
@@ -162,21 +171,20 @@ namespace gui {
     DO(set_term_flags(RAWMODE_LFLAGS,RAWMODE_IFLAGS,RAWMODE_OFLAGS))ORDIE("couldn't set terminal state");
     state|=STATE_TERM;
 
-    //block the TTOU signal which triggers program stop when trying to write to terminal from a background process
+    //sometimes the os tells us to kill ourselves but we don't
     DO(sigemptyset(&cur_sigset)==-1)                      ORDIE("couldn't initialize empty signal set");
-    DO(sigaddset(&cur_sigset,BLOCKED_SIGS)==-1)           ORDIE("coudln't add signals to the block signal set");
-    DO(sigprocmask(SIG_BLOCK,&cur_sigset,&old_sigset)==-1)ORDIE("couldn't block the signals");
-    struct sigaction act={0};
+    DO(sigaddset(&cur_sigset,BLOCKED_SIGS)==-1)           ORDIE("couldn't add signals to the block signal set");
+    DO(sigprocmask(SIG_SETMASK,&cur_sigset,&old_sigset)==-1)ORDIE("couldn't block the signals");
+    struct sigaction act;
     act.sa_handler=&sig_handler_weak;
-    act.sa_mask=cur_sigset;
+    sigemptyset(&act.sa_mask);
+    sigaddset(&act.sa_mask,SIGWINCH);
     act.sa_flags=SA_SIGINFO;
     act.sa_sigaction=&sig_handler;
-    sigaction(SIGWINCH,&act,NULL);
+    DO(sigaction(SIGWINCH,&act,NULL))ORDIE("couldn't set action for resize")
     state|=STATE_SIGS;
 
-    term_size_shenanigans();
-    // struct sigaction t;
-    // DO(sigaction(SIGTTOU,&t,NULL)==-1)ORDIE("couldn't examine action for ttou"); //double check things work later
+    winsize_and_realloc();
   }
 
   bool hasInput(){
@@ -282,7 +290,7 @@ namespace gui {
       }
     }
     return y;
-#undef align_stuff
+    #undef align_stuff
   }
 
   scoord putFText(gui::text_t text,scoord x,scoord y,scoord width,scoord height){

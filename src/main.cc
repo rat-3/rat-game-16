@@ -11,7 +11,7 @@
 #include <time.h>
 FILE* debug;
 typedef void (*function)(void);
-bool logmisc=false;
+bool logmisc=false,shouldredraw=false;
 template<typename T> concept arith=std::is_arithmetic_v<T>;
 template<typename T> concept comp =requires(T a,T b){a<b;a>b;};
 template<comp T,comp U> T constexpr const min(T a,U b){return a<b?a:b;}
@@ -154,7 +154,7 @@ int main() {
       }
       if(escapes&'\x01'){gamestate.paused=!gamestate.paused;}
     }
-    if(c||escapes){
+    if(c||escapes||shouldredraw){
       clock_t t=clock();
       gui::clear_scr();
       if(gamestate.drawFunc){gamestate.drawFunc();}
@@ -165,6 +165,7 @@ int main() {
         fprintf(debug,"took %.3fs to draw a frame!!!\n",s);
       }
       escapes=0;
+      shouldredraw=false;
     }
   }
   fclose(debug);
