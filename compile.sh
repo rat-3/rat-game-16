@@ -14,7 +14,11 @@ if [ "$1" = "debug" ];then
       gdb ./debug/debug.out ./debug/core
     else
       echo compiling debug
-      gcc -std="c++20" -I./src -g ./src/main.cc -lstdc++ -lm -o ./debug/debug.out 2>log.txt
+      if [ "$2" = "build" ];then
+        gcc -std="c++20" -I./src -g ./src/main.cc -lstdc++ -lm -o ./debug/debug.out 2>log.txt
+      else
+        gcc -std="c++20" -I./src -g ./src/debug.cc -lstdc++ -lm -o ./debug/debug.out 2>log.txt
+      fi
       if test $(stat -c%s ./log.txt) -gt 1; then
         echo debug didn\'t compile \:\(
         cat log.txt
@@ -22,12 +26,11 @@ if [ "$1" = "debug" ];then
       fi
       rm log.txt
       echo debug compiled \:3
-      if [ "$2" = "gdb" ];then
+      if [ "$2" = "build" ];then
         gdb ./debug/debug.out
         cat log.txt
       else
         ./debug/debug.out
-        cat log.txt
       fi
     fi
   fi
