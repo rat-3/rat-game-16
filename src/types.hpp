@@ -2,6 +2,7 @@
 #define TYPES_H
 #include <cstring>
 #include <cstdlib>
+#include <math.h>
 namespace colors {
   enum color:char{//3 bit color 1 bit intensity
     black=0,red,green,brown,blue,purple,cyan,white,
@@ -84,7 +85,7 @@ namespace mesh {
   template<typename T> struct vec_inner<vec2<T>>{using type=T;};
   template<typename T> struct vec_inner<vec3<T>>{using type=T;};
   template<typename T> using  vec_inner_t=typename vec_inner<T>::type;
-  template<class T> template<class U> constexpr mesh::vec2<T>::operator U() const {return vec2<vec_inner_t<U>>{(vec_inner_t<U>)x,(vec_inner_t<U>)y};}
+  template<typename T> requires arith<T>&&comp<T> template<typename U> constexpr mesh::vec2<T>::operator U() const {return vec2<vec_inner_t<U>>{(vec_inner_t<U>)x,(vec_inner_t<U>)y};}
   template<typename T> requires arith<T>&&comp<T> struct tri2 {
     vec2<T> a,b,c;
     template<typename U> auto constexpr operator+(const tri2<U>& t)const{return (tri2<vec_inner_t<decltype(std::declval<vec2<T>>()+std::declval<vec2<U>>())>>){a+t.a,b+t.b,c+t.c};}

@@ -1,20 +1,18 @@
-so it's come to my attention that some people (literally just
-you kai) have actually taken an interest to this repository so
-i'm going to put this here
                      CONTRIBUTION GUIDELINES
-- PLEASE PLEASE PLEASE PLEASE CONTRIBUTE
 - it's a beautiful thing to see something i care about cared
   for by others
-- for style just like copy what's already there
+- for style just like copy what's already there (or don't im
+  not your mom just make sure it's readable and doesn't have
+  too much whitespace, i want to see all my stuff in one spot)
 - if you open a pr to main from a fork horrible things might
   happen to you
 - if you want to help but aren't familiar with the project
   then pick an issue labeled 'easy probably' (its the vomit
   brown colored one)
 - keep things on the right branches
-- ask before solving problems that aren't there
+- ask before solving problems that aren't there (only i'm
+  allowed to do that)
 - it should be easy to create content for rat game. every
   format for configuration or assets should have a plaintext
-  option
-- kai reddit wasn't edited
+  option or an in-house tool to work with it
 - clean up src/assets.hpp

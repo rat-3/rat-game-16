@@ -9,22 +9,26 @@ if [ "$1" = "debug" ];then
     fi
     echo preprocessing success
   else
-    echo compiling debug
-    gcc -std="c++20" -I./src -g ./src/main.cc -lstdc++ -lm -o ./debug/debug.out 2>log.txt #change something maybe
-    if test $(stat -c%s ./log.txt) -gt 1; then
-      echo debug didn\'t compile \:\(
-      cat log.txt
-      exit 1
-    fi
-    rm log.txt
-    echo debug compiled \:3
     if [ "$2" = "core" ];then
       xzcat /var/lib/systemd/coredump/core.debug*.xz > ./debug/core
       gdb ./debug/debug.out ./debug/core
-    elif [ "$2" = "build" ];then
-      gdb ./debug/debug.out
     else
-      ./debug/debug.out
+      echo compiling debug
+      gcc -std="c++20" -I./src -g ./src/main.cc -lstdc++ -lm -o ./debug/debug.out 2>log.txt
+      if test $(stat -c%s ./log.txt) -gt 1; then
+        echo debug didn\'t compile \:\(
+        cat log.txt
+        exit 1
+      fi
+      rm log.txt
+      echo debug compiled \:3
+      if [ "$2" = "gdb" ];then
+        gdb ./debug/debug.out
+        cat log.txt
+      else
+        ./debug/debug.out
+        cat log.txt
+      fi
     fi
   fi
   exit 0
