@@ -30,9 +30,9 @@ namespace gui {
   scoord selected_btn;
   using namespace colors;
 
-  const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|ISIG|IEXTEN),//remember that ~ is bitwise not
-                 RAWMODE_IFLAGS=~(BRKINT|ICRNL|INPCK|ISTRIP|IXON),
-                 RAWMODE_OFLAGS=~(OPOST);//terminal bits to set for "raw" mode
+  const tcflag_t RAWMODE_LFLAGS=~(ECHO|ICANON|ISIG|IEXTEN),//show chars typed/fill buffer on newline/signals or something/i forgot
+                 RAWMODE_IFLAGS=~(BRKINT|ICRNL|ISTRIP|IXON),//should be using ixon to halt and flush frames during drawing?
+                 RAWMODE_OFLAGS=ONLCR|~(OPOST);//no post-processing output(id how useful it is)
   const int BLOCKED_SIGS=SIGTTOU|SIGSTOP|SIGTTIN|SIGTSTP;
 
   assets::font_t f_default;
@@ -97,13 +97,13 @@ namespace gui {
   void stop(const char* err){
     if(state&STATE_ICLR){return;}
     BRKST(PMDS,printf("\x1b[c""\x1b""[?1049l\x1b[?25h");)//lowkirk don't know what the [c is for but
-    printf("CURING TERMINAL ILLNESS\n\r");//it breaks without it
+    printf("CURING TERMINAL ILLNESS\n");//it breaks without it
     BRKST(SIGS,
-      printf("\x1b""[0mrestoring sigset\n\r");
+      printf("\x1b""[0mrestoring sigset\n");
       if(sigprocmask(SIG_SETMASK,&old_sigset,NULL)==-1){perror("couldn't restore signal set");}
     )
     BRKST(TERM,
-      printf("restoring terminal state\n\r");
+      printf("restoring terminal state\n");
       if(tcsetattr(STDIN_FILENO,TCSAFLUSH,&old_term_state)){perror("couldn't to restore terminal state");}
     )
     free_bufs();

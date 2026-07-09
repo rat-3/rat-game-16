@@ -1,7 +1,7 @@
 #i traced over the doom hud for this one :3
 #it's not very pretty
 scale(10,10)
-fill((0,0),(10,1.2),rgb(0,0,0),'#')
+fill((0,0),(10,1.2),rgb(64,64,64),'#')
 lines(
   [(0,0),(10,0),(10,1.2),(0,1.2),(0,0)],
   rgb(255,255,255)
